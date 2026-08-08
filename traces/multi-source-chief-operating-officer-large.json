@@ -1,0 +1,92 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "Identify accounts at risk of churn for targeted retention strategies",
+        "solution": "S-1",
+        "methodology": "gbdt",
+        "why_this_data_supports_it": "The tables include account-level churn dates, support tickets, and session durations that can be used as features to predict churn risk.",
+        "required_first": [
+          "crm",
+          "support",
+          "web"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": true,
+          "holdout": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "The COO can focus on the top predicted accounts at risk and delegate specific retention actions.",
+        "fits_the_constraint": "Names specific accounts to focus on."
+      },
+      {
+        "intent": "Prioritize collection efforts for overdue accounts with high invoice amounts",
+        "solution": "S-4",
+        "methodology": "uplift",
+        "why_this_data_supports_it": "The invoices table shows overdue days and amount fields which are crucial for prioritizing collections.",
+        "required_first": [
+          "billing"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": false,
+          "holdout": true,
+          "incrementality": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Focus collection team efforts on accounts with the highest predicted return on collections.",
+        "fits_the_constraint": "Names specific accounts to prioritize in collections."
+      },
+      {
+        "intent": "Suggest next-best-action for customer engagement based on product telemetry",
+        "solution": "S-11",
+        "methodology": "gbdt",
+        "why_this_data_supports_it": "Product telemetry data provides insights into feature use, which can suggest personalized engagement strategies.",
+        "required_first": [
+          "product"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": true,
+          "holdout": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Enable account managers to engage customers with personalized actions to increase feature adoption.",
+        "fits_the_constraint": "Focuses on specific accounts or products for action."
+      }
+    ],
+    "declined": [
+      {
+        "intent": "Capture streaming product usage events for real-time analytics",
+        "reason": "The connection for product telemetry via Kafka is currently in the discovered state.",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "agriculture-crop-management",
+    "retail-sales-insights",
+    "digital-marketing-optimization"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}

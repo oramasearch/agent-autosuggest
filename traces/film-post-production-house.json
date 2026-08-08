@@ -1,0 +1,46 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "optimize project timelines considering compute and processing resources",
+        "solution": "S-8",
+        "methodology": "forecast",
+        "why_this_data_supports_it": "The data includes 'duration_sec' and 'created_at' from raw_video_footage, and 'assigned_on', 'due_on' from editor_assignments, which are necessary for analyzing project load and deadlines.",
+        "required_first": [
+          "align project timelines with real-time resource availability",
+          "ensure synchronization between asset-management-db and project-tracking-system for cohesive workflow management"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": false,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": false,
+          "holdout": true,
+          "explain": false,
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Dynamically allocate resources to projects with imminent deadlines to ensure timely delivery without overextending capacity",
+        "fits_the_constraint": "manages compute resources while considering data processing times and maintains data privacy"
+      }
+    ],
+    "declined": [
+      {
+        "intent": "predict client satisfaction directly from project data",
+        "reason": "client satisfaction data is not captured in current tables",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "digital-marketing-optimization",
+    "supply-chain-demand",
+    "employment-churn-prediction"
+  ],
+  "prompt_version": "v1",
+  "defects": [
+    "suggested[0]: forecast needs backtest, temporal_validation"
+  ]
+}

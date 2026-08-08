@@ -1,0 +1,43 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "optimize maintenance schedules to minimize equipment downtime and align with seasonal demand",
+        "solution": "S-8",
+        "methodology": "forecast",
+        "why_this_data_supports_it": "Columns related to on_hand and on_order in inventory_snapshots table",
+        "required_first": [],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "temporal_validation": true,
+          "backtest": true,
+          "model": true,
+          "calibrated": false,
+          "holdout": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "the operations team schedules maintenance based on predicted equipment utilization and parts availability",
+        "fits_the_constraint": "enables real-time actionable insights aligning with seasonal demands"
+      }
+    ],
+    "declined": [
+      {
+        "intent": "real-time inventory optimization",
+        "reason": "existing data does not include real-time feeds or transactional logs",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "retail-sports",
+    "digital-marketing-optimization",
+    "material-logistics"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}

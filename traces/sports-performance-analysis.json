@@ -1,0 +1,43 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "optimize player performance and injury management",
+        "solution": "S-8",
+        "methodology": "gbdt",
+        "why_this_data_supports_it": "The player_performance table provides metrics on goals, assists, minutes played, and injuries for player performance modeling. Injuries_sustained is a key feature for injury prevention.",
+        "required_first": [
+          "enhance data capturing for live match events"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": true,
+          "holdout": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Make informed decisions on player training and game strategies to optimize performance and reduce injury rates.",
+        "fits_the_constraint": "Focuses on data-driven insights with minimal data analyst resources needed."
+      }
+    ],
+    "declined": [
+      {
+        "intent": "real-time tactical decisions during games based on live data",
+        "reason": "Limited data capturing for live match events restricts the ability to provide real-time insights.",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "hospital-readmission-risk",
+    "digital-marketing-optimization",
+    "retail-operations-optimization"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}

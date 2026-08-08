@@ -1,0 +1,43 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "Forecast churn risk for B2B SaaS accounts and identify key intervention opportunities.",
+        "solution": "S-1",
+        "methodology": "gbdt",
+        "why_this_data_supports_it": "The 'churn_date' from accounts serves as a label for predicting churn. Features such as 'mrr', 'segment', and communication patterns from 'comm_events' can be used to train the model.",
+        "required_first": [
+          "sfdc_pg"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": true,
+          "holdout": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Provide priority recommendations for customer success teams to intervene with at-risk accounts.",
+        "fits_the_constraint": "All models and outputs should be reproducible through SQL queries."
+      }
+    ],
+    "declined": [
+      {
+        "intent": "Integrate customer support data from Zendesk for better churn prediction.",
+        "reason": "Zendesk data state is still discovered but not captured, preventing integration.",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "agriculture-crop-management",
+    "telecom-customer-service-improvement",
+    "digital-marketing-optimization"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}

@@ -1,0 +1,45 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "optimize inventory and reduce lead times in the furniture production process",
+        "solution": "S-6",
+        "methodology": "forecast",
+        "why_this_data_supports_it": "The 'inventory' table provides current stock levels and reorder points with lead times, while the 'orders' table captures order dates and delivery requirements, which can be used to predict future inventory needs and optimize supply chain logistics.",
+        "required_first": [
+          "capture supply chain data from 'supply_chain_sys'"
+        ],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": false,
+          "holdout": true,
+          "temporal_validation": true,
+          "backtest": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "production team adjusts inventory levels and production schedules based on forecasted demand and lead time analysis",
+        "fits_the_constraint": "ensures minimal stockouts and optimal inventory levels while maintaining high-quality production standards"
+      }
+    ],
+    "declined": [
+      {
+        "intent": "implement an end-to-end supply chain optimization system",
+        "reason": "supply chain system data needs to be captured first for full implementation",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "retail-operations-optimization",
+    "supply-chain-demand",
+    "material-logistics"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}

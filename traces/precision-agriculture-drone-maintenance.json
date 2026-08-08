@@ -1,0 +1,65 @@
+{
+  "project_profile": {
+    "suggested": [
+      {
+        "intent": "Predict drone maintenance needs to optimize schedules and improve uptime",
+        "solution": "S-8",
+        "methodology": "forecast",
+        "why_this_data_supports_it": "The columns 'last_service_date', 'service_status', 'battery_health', and 'flight_hours' provide a historical maintenance record and performance data to forecast future maintenance needs.",
+        "required_first": [],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": true,
+          "model": true,
+          "calibrated": false,
+          "holdout": true,
+          "backtest": true,
+          "temporal_validation": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Operations Manager schedules predictive maintenance, reducing unscheduled downtime.",
+        "fits_the_constraint": "Reduces downtime to less than 5% by proactively addressing potential maintenance issues."
+      },
+      {
+        "intent": "Enhance field monitoring efficiency by analyzing drone data",
+        "solution": "S-7",
+        "methodology": "anomaly",
+        "why_this_data_supports_it": "The 'crop_health_index' and 'soil_moisture_level' fields help identify anomalies in field data that impact monitoring accuracy.",
+        "required_first": [],
+        "pipeline_shape": {
+          "connect": true,
+          "clean": true,
+          "point_in_time": true,
+          "leakage_free": false,
+          "model": true,
+          "calibrated": false,
+          "holdout": false,
+          "threshold_governed": true,
+          "explain": "shap",
+          "serve": true,
+          "act": true
+        },
+        "business_action": "Operations Manager uses anomaly detection to refine drone monitoring parameters, increasing field monitoring accuracy by 15%.",
+        "fits_the_constraint": "Improves field monitoring efficiency, directly impacting accuracy."
+      }
+    ],
+    "declined": [
+      {
+        "intent": "Integrate inventory snapshots with drone maintenance",
+        "reason": "Mismatch of context between inventory and maintenance data.",
+        "answer": "capture it first"
+      }
+    ]
+  },
+  "few_shot_from": [
+    "retail-sports",
+    "agriculture-crop-management",
+    "energy-consulting-services"
+  ],
+  "prompt_version": "v1",
+  "defects": []
+}
