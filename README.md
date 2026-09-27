@@ -36,7 +36,16 @@ Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.c
 | `GET /healthz` | `200` with the corpus size, or `503` when the corpus is missing |
 | `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
 
-It reads no node: lake builds the profile, so the agent sees only the situation it is handed.
+**Scan my workspace** (lake#269) hands it no profile. Instead it gets `zetta_base_url` (lake's
+`/workspaces/<customer>/zetta` path) and a read-only task credential as `zetta_token`, and
+`workspace.py` reads the profile itself: every dataset's database, name, columns and rows, up to
+twelve, via `list_datasets` and `get_dataset`, the shape lake used to build. A workspace with no
+datasets is told to load data first. The credential never reaches a trace.
+
+**Turns arrive on lake's agent bus** (lake `docs/api/agent-bus.md`). `lake_bus.py` long-polls
+`receive_agent_tasks` through lake with this agent's own bus credential (`AGENT_BUS_TOKEN`). It
+claims each task, runs it as `/v1/turn` would, and publishes `progress`, then the answer or
+`failed`. It starts when the operator sets `LAKE_URL`, `AGENT_BUS_TOKEN` and `AGENT_BUS_AGENT`.
 `AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
 `AUTOSUGGEST_MODEL` picks the model; `OPENAI_API_KEY` is the general Orama key the operator mounts.
 
