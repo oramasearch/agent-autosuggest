@@ -23,6 +23,28 @@ uv run agent-autosuggest path/to/profile.json
 Exit `0` clean, `2` when the answer has defects (it still prints — you should see what was wrong
 with it), `1` when nothing parseable came back.
 
+## Service mode (in lake)
+
+In lake Auto-Suggest is a specialized agent of the **Agent Library**: Design's *Discover
+Opportunities* sends it the workspace's profile and shows its `suggested` entries as ranked
+Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.com/oramasearch/lake/issues/228),
+[lake#237](https://github.com/oramasearch/lake/issues/237)). `agent-autosuggest-serve` runs it on
+`PORT` (8080):
+
+| Route | What it does |
+|---|---|
+| `GET /healthz` | `200` with the corpus size, or `503` when the corpus is missing |
+| `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
+
+It reads no node: lake builds the profile, so the agent sees only the situation it is handed.
+`AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
+`AUTOSUGGEST_MODEL` picks the model; `OPENAI_API_KEY` is the general Orama key the operator mounts.
+
+**Image:** `Dockerfile`, published **private** as `oramasearch/agent-autosuggest`, with the
+corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), built on the
+cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
+context:corpus=local:corpus`). Tests: `uv run pytest`.
+
 ## The three parts
 
 | file | job |
