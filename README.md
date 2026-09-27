@@ -40,6 +40,12 @@ It reads no node: lake builds the profile, so the agent sees only the situation 
 `AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
 `AUTOSUGGEST_MODEL` picks the model; `OPENAI_API_KEY` is the general Orama key the operator mounts.
 
+**The solutions catalogue** in the image is built at image-build time by zetta's own
+`scripts/build_catalog.py` from the solutions-designs plan, and passed as the named build context
+`catalog` (`catalog.json` and `catalog.source.json`, which records the zetta and solutions-designs
+commits). `ZETTA_CATALOG` points at it; without it the agent builds the catalogue from a bridge
+checkout, as before.
+
 **Image:** `Dockerfile`, published **private** as `oramasearch/agent-autosuggest`, with the
 corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), built on the
 cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
