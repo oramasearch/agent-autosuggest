@@ -1,7 +1,7 @@
 [project]
 name = "agent-autosuggest"
 version = "0.1.0"
-description = "Add your description here"
+description = "Auto-Suggest: recommends the Opportunities a profile's data supports"
 readme = "README.md"
 authors = [
     { name = "Steve Sperandeo", email = "steve.sperandeo@gmail.com" }
@@ -14,6 +14,10 @@ dependencies = [
 
 [project.scripts]
 agent-autosuggest = "agent_autosuggest:main"
+agent-autosuggest-serve = "agent_autosuggest:serve"
+
+[dependency-groups]
+dev = ["pytest>=8"]
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
