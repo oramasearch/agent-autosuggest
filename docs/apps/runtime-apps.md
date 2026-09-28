@@ -17,6 +17,17 @@ caller. App changes such as `create_app`, `deploy_app`, `build_app`, `rollback_a
 are vocabulary for a reviewed proposal only. ApplicationAgent (`agent-application`, turn kind
 `app`) owns the later build or change after a person confirms the proposal.
 
+An App Opportunity adds a `delivery` object to the ordinary solution Opportunity. `shows` states
+the concrete dashboard or internal-tool contents. `agent`, `turn_kind`, `status`, and
+`confirmation_required` bind the handoff to a confirmed ApplicationAgent turn. `proposed_actions`
+contains only registered App or build action names. Auto-Suggest deterministically restores these
+fields to `agent-application`, `app`, `proposed`, and `true`, and removes action names outside its
+documented proposal vocabulary before validation.
+
+The runtime prompt is `v4`. App contract cases in `evals/data-apps.jsonl` run through the same
+enforcement and validation used by a service turn. The service trace includes the App/build
+evidence but never the task credential.
+
 If both list capabilities are unknown, Auto-Suggest records an empty compatibility snapshot. Other
 list failures surface as turn failures because silently treating an authorization or store problem
 as an empty workspace could create a duplicate App recommendation.

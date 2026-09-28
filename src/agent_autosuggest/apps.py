@@ -43,6 +43,8 @@ PROPOSABLE_ACTIONS = (
     "cancel_build",
 )
 
+DEFAULT_CREATE_ACTIONS = ("create_app", "deploy_app")
+
 
 def inspect(query: Query | None) -> dict[str, Any]:
     """Read existing Apps, builds, and their retained events for this turn."""
@@ -87,6 +89,72 @@ def as_context(evidence: dict[str, Any]) -> str:
         )
         + "\n```\n"
     )
+
+
+def enforce(answer: dict[str, Any]) -> dict[str, Any]:
+    """Make every App delivery an exact, confirmation-gated ApplicationAgent proposal."""
+    grounded: dict[str, Any] = dict(answer)
+    for bucket in ("suggested", "declined"):
+        items: list[dict[str, Any]] = []
+        for original in answer.get(bucket) or []:
+            item = dict(original)
+            delivery = item.get("delivery")
+            if not isinstance(delivery, dict) or delivery.get("kind") != "app":
+                items.append(item)
+                continue
+            proposed = delivery.get("proposed_actions")
+            proposed = proposed if isinstance(proposed, list) else []
+            actions = [
+                action
+                for action in dict.fromkeys(proposed)
+                if action in PROPOSABLE_ACTIONS
+            ]
+            item["delivery"] = {
+                **delivery,
+                "kind": "app",
+                "agent": "agent-application",
+                "turn_kind": "app",
+                "status": "proposed",
+                "confirmation_required": True,
+                "proposed_actions": actions or list(DEFAULT_CREATE_ACTIONS),
+            }
+            items.append(item)
+        grounded[bucket] = items
+    return grounded
+
+
+def add_defects(
+    answer: dict[str, Any],
+    evidence: dict[str, Any] | None,
+    problems: list[str],
+) -> None:
+    """Append App-delivery contract violations to the shared defect list."""
+    known = _known_app_ids(evidence or _fallback("App evidence was not supplied"))
+    current = (evidence or {}).get("source") == "lake App and build capabilities"
+    for bucket in ("suggested", "declined"):
+        for index, item in enumerate(answer.get(bucket) or []):
+            delivery = item.get("delivery")
+            if not isinstance(delivery, dict) or delivery.get("kind") != "app":
+                continue
+            where = f"{bucket}[{index}].delivery"
+            if not str(delivery.get("shows") or "").strip():
+                problems.append(f"{where}: an App opportunity must say what the App shows")
+            if delivery.get("agent") != "agent-application":
+                problems.append(f"{where}: App delivery must use agent-application")
+            if delivery.get("turn_kind") != "app":
+                problems.append(f"{where}: ApplicationAgent must receive an app turn")
+            if delivery.get("status") != "proposed":
+                problems.append(f"{where}: App actions must remain proposed")
+            if delivery.get("confirmation_required") is not True:
+                problems.append(f"{where}: App actions require a person's confirmation")
+            actions = delivery.get("proposed_actions")
+            if not isinstance(actions, list) or not actions:
+                problems.append(f"{where}: proposed_actions must name at least one App action")
+            elif any(action not in PROPOSABLE_ACTIONS for action in actions):
+                problems.append(f"{where}: proposed_actions contains an unknown App action")
+            app_id = delivery.get("app_id")
+            if current and app_id and app_id not in known:
+                problems.append(f"{where}: app_id {app_id!r} is not in list_apps")
 
 
 def _list(query: Query, capability: str, key: str) -> dict[str, Any] | None:
@@ -140,6 +208,15 @@ def _optional(query: Query, capability: str, inputs: dict[str, Any]) -> dict[str
         return query(capability, inputs)
     except workspace.CapabilityError as error:
         return {"unavailable": error.code, "message": str(error)}
+
+
+def _known_app_ids(evidence: dict[str, Any]) -> set[str]:
+    identifiers: set[str] = set()
+    for record in evidence.get("apps") or []:
+        app = record.get("app") if isinstance(record, dict) else None
+        if isinstance(app, dict) and isinstance(app.get("id"), str):
+            identifiers.add(app["id"])
+    return identifiers
 
 
 def _fallback(reason: str) -> dict[str, Any]:

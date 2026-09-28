@@ -60,6 +60,13 @@ if that registry is also unavailable, only M-1 is treated as runnable. See
 [`docs/solutions/runtime-solutions.md`](docs/solutions/runtime-solutions.md) and
 [`docs/methodologies/runtime-methodologies.md`](docs/methodologies/runtime-methodologies.md).
 
+**Data can make an App the right Opportunity.** Auto-Suggest reads `list_apps`, `get_app`,
+`receive_app_events`, `list_builds`, `get_build`, and `receive_build_events` directly from lake.
+An App Opportunity names what its dashboard or internal tool shows and proposes the relevant App
+actions for a person to confirm. It delegates the confirmed build or change to ApplicationAgent
+(`agent-application`, turn kind `app`); Auto-Suggest never performs an App action. See
+[`docs/apps/runtime-apps.md`](docs/apps/runtime-apps.md).
+
 **The solutions catalogue** in the image is built at image-build time by zetta's own
 `scripts/build_catalog.py` from the solutions-designs plan, and passed as the named build context
 `catalog` (`catalog.json` and `catalog.source.json`, which records the zetta and solutions-designs
@@ -71,7 +78,7 @@ corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), 
 cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
 context:corpus=local:corpus`). Tests: `uv run pytest`.
 
-## The five parts
+## The six parts
 
 | file | job |
 |---|---|
@@ -79,6 +86,7 @@ context:corpus=local:corpus`). Tests: `uv run pytest`.
 | `catalog.py` | The solutions catalogue as **context, not a tool**. Built from the plan markdown by `zetta/scripts/build_catalog.py`, never vendored. |
 | `methodologies.py` | Reads the workspace registry and feature evidence, then enforces runnable and transform-first decisions. |
 | `solutions.py` | Reads the workspace's solution registry and enforces levels, composition, and runtime status. |
+| `apps.py` | Reads current Ship Apps and builds, then enforces confirmation-gated ApplicationAgent proposals. |
 | `validate.py` | Rejects claims that contradict the current solution or legacy methodology registry. |
 
 ## Why the catalogue is context

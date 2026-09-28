@@ -19,10 +19,10 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import catalog, methodologies, solutions, validate
+from agent_autosuggest import apps, catalog, methodologies, solutions, validate
 from agent_autosuggest.retrieval import Corpus
 
-PROMPT_VERSION = "v3"
+PROMPT_VERSION = "v4"
 PROMPTS = Path(__file__).parent / "prompts"
 
 
@@ -46,15 +46,18 @@ def suggest(profile: dict[str, Any], corpus: Corpus, client: OpenAI, model: str,
             methodology_evidence: dict[str, Any] | None = None,
             solution_evidence: dict[str, Any] | None = None,
             query: methodologies.Query | None = None,
+            app_evidence: dict[str, Any] | None = None,
             ) -> tuple[dict[str, Any] | None, list[str]]:
     """Return the project profile and which examples informed it."""
     methodology_evidence = methodology_evidence or methodologies.inspect(profile, None)
     solution_evidence = solution_evidence or solutions.inspect(None)
+    app_evidence = app_evidence or apps.inspect(None)
     neighbours = corpus.nearest(profile, k)
     system = ((PROMPTS / f"{PROMPT_VERSION}.md").read_text()
               + catalog.as_context()
               + solutions.as_context(solution_evidence)
               + methodologies.as_context(methodology_evidence)
+              + apps.as_context(app_evidence)
               + _shots(neighbours))
     messages: list[dict[str, Any]] = [{"role": "system", "content": system},
                                       {"role": "user", "content": json.dumps(profile)}]
@@ -74,7 +77,13 @@ def suggest(profile: dict[str, Any], corpus: Corpus, client: OpenAI, model: str,
             methodology_evidence,
             query,
         )
-        problems = validate.defects(answer, methodology_evidence, solution_evidence)
+        answer = apps.enforce(answer)
+        problems = validate.defects(
+            answer,
+            methodology_evidence,
+            solution_evidence,
+            app_evidence,
+        )
         if not problems:
             return answer, [e.get("profile_id", "?") for e in neighbours]
         if attempt == 0:
