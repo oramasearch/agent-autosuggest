@@ -21,7 +21,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import lake_bus, methodologies, validate, workspace
+from agent_autosuggest import lake_bus, methodologies, solutions, validate, workspace
 from agent_autosuggest.agent import PROMPT_VERSION, suggest
 from agent_autosuggest.retrieval import Corpus
 
@@ -31,7 +31,7 @@ class Settings:
 
     def __init__(self) -> None:
         self.corpus_path = Path(
-            os.environ.get("AUTOSUGGEST_CORPUS", "/app/corpus/autosuggest-sft-v1.jsonl"))
+            os.environ.get("AUTOSUGGEST_CORPUS", "/app/corpus/autosuggest-sft-v3.jsonl"))
         self.model = os.environ.get("AUTOSUGGEST_MODEL", "gpt-4o")
         self.lake_url = os.environ.get("LAKE_URL", "")
         self.token = os.environ.get("AGENT_SERVICE_TOKEN", "")
@@ -73,24 +73,34 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
             query = workspace.make_query(lake_url, lake_token, customer_id)
     try:
         methodology_evidence = methodologies.inspect(profile, query)
+        solution_evidence = solutions.inspect(query)
     except workspace.CapabilityError as error:
         return {"ok": False, "error": f"{error.code}: {error}"}
-    answer, used = suggest(profile, corpus, client or OpenAI(), turn.get("model") or settings.model,
-                           settings.shots, methodology_evidence)
+    answer, used = suggest(
+        profile,
+        corpus,
+        client or OpenAI(),
+        turn.get("model") or settings.model,
+        settings.shots,
+        methodology_evidence,
+        solution_evidence,
+        query,
+    )
     if answer is None:
         return {"ok": False, "error": "no parseable project profile came back"}
     result = {
         "project_profile": answer,
         "few_shot_from": used,
         "prompt_version": PROMPT_VERSION,
-        "defects": validate.defects(answer, methodology_evidence),
+        "defects": validate.defects(answer, methodology_evidence, solution_evidence),
     }
     trace_id = str(uuid.uuid4())
     settings.trace_dir.mkdir(parents=True, exist_ok=True)
     (settings.trace_dir / f"{trace_id}.json").write_text(json.dumps(
         {"trace_id": trace_id, "agent": "agent-autosuggest",
          "at": datetime.now(timezone.utc).isoformat(), "profile": profile,
-         "methodology_evidence": methodology_evidence, "result": result},
+         "methodology_evidence": methodology_evidence,
+         "solution_evidence": solution_evidence, "result": result},
         indent=1, default=str))
     return {"ok": True, "trace_id": trace_id, "result": result}
 

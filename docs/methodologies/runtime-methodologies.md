@@ -22,12 +22,14 @@ agent uses the compatibility fact that only M-1, churn / GBDT classification, is
 that the old-engine fallback is active. A direct invocation without workspace query credentials
 uses the same conservative fallback.
 
-The runtime prompt is `v2`. It does not ask for a generic pipeline shape; the downstream
-`compile_intent` call builds the selected methodology's pipeline.
+The runtime prompt is `v3`. This methodology contract remains the compatibility path when
+`list_solutions` is unavailable. On a current engine the solution registry composes multiple
+methodologies, as documented in
+[`../solutions/runtime-solutions.md`](../solutions/runtime-solutions.md).
 
-## Opportunity contract
+## Legacy Opportunity contract
 
-Both `suggested` and `declined` records include `solution`, `methodology`, and `runnable`. Decline
-answers can be `capture it first`, `cannot be done`, `not supported yet`, or `transform first`.
-Unsupported reasons include the methodology id and registry issue. Transform reasons begin with
-`transform first:` and state the required data preparation.
+On the compatibility path, both `suggested` and `declined` records include `solution`,
+`methodology`, and `runnable`. Decline answers can be `capture it first`, `cannot be done`, `not
+supported yet`, or `transform first`. Unsupported reasons include the methodology id and registry
+issue. Transform reasons begin with `transform first:` and state the required data preparation.

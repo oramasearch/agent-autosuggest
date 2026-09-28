@@ -19,10 +19,10 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import catalog, methodologies, validate
+from agent_autosuggest import catalog, methodologies, solutions, validate
 from agent_autosuggest.retrieval import Corpus
 
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 PROMPTS = Path(__file__).parent / "prompts"
 
 
@@ -44,28 +44,37 @@ def _shots(examples: list[dict[str, Any]]) -> str:
 def suggest(profile: dict[str, Any], corpus: Corpus, client: OpenAI, model: str,
             k: int = 3,
             methodology_evidence: dict[str, Any] | None = None,
+            solution_evidence: dict[str, Any] | None = None,
+            query: methodologies.Query | None = None,
             ) -> tuple[dict[str, Any] | None, list[str]]:
     """Return the project profile and which examples informed it."""
     methodology_evidence = methodology_evidence or methodologies.inspect(profile, None)
+    solution_evidence = solution_evidence or solutions.inspect(None)
     neighbours = corpus.nearest(profile, k)
     system = ((PROMPTS / f"{PROMPT_VERSION}.md").read_text()
               + catalog.as_context()
+              + solutions.as_context(solution_evidence)
               + methodologies.as_context(methodology_evidence)
               + _shots(neighbours))
     messages: list[dict[str, Any]] = [{"role": "system", "content": system},
                                       {"role": "user", "content": json.dumps(profile)}]
 
-    # One repair round. The defects are mechanical — a citation outside the catalogue, a calibrated
-    # forecast — so handing them back is enough; a second round would be the model guessing rather
-    # than correcting, and an answer that fails twice should surface as failed.
+    # One repair round. Registry contradictions are mechanical, so handing them back is enough; a
+    # second round would be the model guessing rather than correcting, and an answer that fails
+    # twice should surface as failed.
     answer = None
     for attempt in range(2):
         text = _parse(client.chat.completions.create(
             model=model, messages=messages).choices[0].message.content)
         if text is None:
             break
-        answer = methodologies.enforce(text, methodology_evidence)
-        problems = validate.defects(answer, methodology_evidence)
+        answer = solutions.enforce(
+            text,
+            solution_evidence,
+            methodology_evidence,
+            query,
+        )
+        problems = validate.defects(answer, methodology_evidence, solution_evidence)
         if not problems:
             return answer, [e.get("profile_id", "?") for e in neighbours]
         if attempt == 0:

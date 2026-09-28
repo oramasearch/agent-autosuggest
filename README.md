@@ -16,7 +16,7 @@ a training run. See [`zetta-bridge/docs/agent-scaffold.md`](../../docs/agent-sca
 
 ```bash
 export OPENAI_API_KEY=...
-export AUTOSUGGEST_CORPUS=../agent-autosuggest-corpus/corpus/autosuggest-sft-v1.jsonl
+export AUTOSUGGEST_CORPUS=../agent-autosuggest-corpus/corpus/autosuggest-sft-v3.jsonl
 uv run agent-autosuggest path/to/profile.json
 ```
 
@@ -49,13 +49,15 @@ claims each task, runs it as `/v1/turn` would, and publishes `progress`, then th
 `AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
 `AUTOSUGGEST_MODEL` picks the model; `OPENAI_API_KEY` is the general Orama key the operator mounts.
 
-**Methodologies are read from the engine for every turn.** Auto-Suggest calls lake's
-`workspace_query` for `list_methodologies`, ranks runnable Opportunities first, and returns each
-Opportunity's `methodology`, catalogue `solution`, and registry-derived `runnable` status. It uses
-`analyze_dataset` and `plan_features` to decline data that must be transformed first. Useful work
-that waits on engine support is also declined and names the methodology's Zetta issue. A workspace
-whose engine returns `unknown_capability` for the registry is treated conservatively as supporting
-only M-1. See
+**Solutions and methodologies are read from the engine for every turn.** Auto-Suggest calls lake's
+`workspace_query` for `list_solutions` and `list_methodologies`. A current-engine Opportunity names
+its S-n solution, selected level, composed methodology ids, and registry-derived `runnable` status.
+Entries with missing production components say that the pipeline builds but operation still needs
+the named components; Band-B sketches name their promotion condition and remain declined. It uses
+`analyze_dataset` and `plan_features` to decline data that must be transformed first. If
+`list_solutions` returns `unknown_capability`, the agent preserves the methodology-only behavior;
+if that registry is also unavailable, only M-1 is treated as runnable. See
+[`docs/solutions/runtime-solutions.md`](docs/solutions/runtime-solutions.md) and
 [`docs/methodologies/runtime-methodologies.md`](docs/methodologies/runtime-methodologies.md).
 
 **The solutions catalogue** in the image is built at image-build time by zetta's own
@@ -69,14 +71,15 @@ corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), 
 cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
 context:corpus=local:corpus`). Tests: `uv run pytest`.
 
-## The four parts
+## The five parts
 
 | file | job |
 |---|---|
 | `retrieval.py` | TF-IDF nearest situations. Similarity is over the **situation**, never the answer — retrieving by answer shows the model what it is supposed to conclude. |
 | `catalog.py` | The solutions catalogue as **context, not a tool**. Built from the plan markdown by `zetta/scripts/build_catalog.py`, never vendored. |
 | `methodologies.py` | Reads the workspace registry and feature evidence, then enforces runnable and transform-first decisions. |
-| `validate.py` | Rejects citations outside the catalogue and claims that contradict the current methodology registry. |
+| `solutions.py` | Reads the workspace's solution registry and enforces levels, composition, and runtime status. |
+| `validate.py` | Rejects claims that contradict the current solution or legacy methodology registry. |
 
 ## Why the catalogue is context
 

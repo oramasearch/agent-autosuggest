@@ -203,6 +203,18 @@ def _required_transform(evidence: dict[str, Any], methodology: str) -> str | Non
     return "; ".join(dict.fromkeys(instruction for instruction in instructions if instruction))
 
 
+def required_transform(evidence: dict[str, Any], methodology_ids: list[str]) -> str | None:
+    """Return the preparation that blocks any selected methodology in a composition."""
+    instructions = [
+        instruction
+        for methodology in methodology_ids
+        if (instruction := _required_transform(evidence, methodology))
+    ]
+    if not instructions:
+        return None
+    return "; ".join(dict.fromkeys(instructions))
+
+
 def _transform_instruction(plan: dict[str, Any]) -> str | None:
     transform = plan.get("transform_first")
     if isinstance(transform, str) and transform.strip():
