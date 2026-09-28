@@ -21,7 +21,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import validate
+from agent_autosuggest import lake_bus, validate, workspace
 from agent_autosuggest.agent import PROMPT_VERSION, suggest
 from agent_autosuggest.retrieval import Corpus
 
@@ -52,8 +52,14 @@ def profile_from_turn(turn: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
-             client: OpenAI | None = None) -> dict[str, Any]:
+             client: OpenAI | None = None, get: workspace.Get | None = None) -> dict[str, Any]:
     profile = profile_from_turn(turn)
+    if profile is None and turn.get("zetta_base_url") and turn.get("zetta_token"):
+        # Scan my workspace (lake#269): read the workspace with the turn's read-only credential.
+        profile = profile_from_turn({**turn, "profile": workspace.read_profile(
+            turn["zetta_base_url"], turn["zetta_token"], get)})
+        if profile is None:
+            return {"ok": False, "error": "the workspace has no datasets yet: load data first"}
     if profile is None:
         return {"ok": False, "error": "a turn needs a profile with its tables or connections"}
     answer, used = suggest(profile, corpus, client or OpenAI(), turn.get("model") or settings.model,
@@ -125,5 +131,7 @@ def serve() -> int:
     port = int(os.environ.get("PORT", "8080"))
     print(json.dumps({"agent": "agent-autosuggest", "listening": port,
                       "examples": len(corpus.examples)}), flush=True)
+    # Turns arrive as tasks on lake's agent bus (lake#269); /v1/turn stays for direct calls.
+    lake_bus.start_from_env(lambda turn: run_turn(turn, settings, corpus), "agent-autosuggest")
     ThreadingHTTPServer(("0.0.0.0", port), make_handler(settings, corpus)).serve_forever()
     return 0
