@@ -19,10 +19,10 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import catalog, validate
+from agent_autosuggest import catalog, methodologies, validate
 from agent_autosuggest.retrieval import Corpus
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 PROMPTS = Path(__file__).parent / "prompts"
 
 
@@ -42,11 +42,16 @@ def _shots(examples: list[dict[str, Any]]) -> str:
 
 
 def suggest(profile: dict[str, Any], corpus: Corpus, client: OpenAI, model: str,
-            k: int = 3) -> tuple[dict[str, Any] | None, list[str]]:
+            k: int = 3,
+            methodology_evidence: dict[str, Any] | None = None,
+            ) -> tuple[dict[str, Any] | None, list[str]]:
     """Return the project profile and which examples informed it."""
+    methodology_evidence = methodology_evidence or methodologies.inspect(profile, None)
     neighbours = corpus.nearest(profile, k)
     system = ((PROMPTS / f"{PROMPT_VERSION}.md").read_text()
-              + catalog.as_context() + _shots(neighbours))
+              + catalog.as_context()
+              + methodologies.as_context(methodology_evidence)
+              + _shots(neighbours))
     messages: list[dict[str, Any]] = [{"role": "system", "content": system},
                                       {"role": "user", "content": json.dumps(profile)}]
 
@@ -59,8 +64,8 @@ def suggest(profile: dict[str, Any], corpus: Corpus, client: OpenAI, model: str,
             model=model, messages=messages).choices[0].message.content)
         if text is None:
             break
-        answer = text
-        problems = validate.defects(answer)
+        answer = methodologies.enforce(text, methodology_evidence)
+        problems = validate.defects(answer, methodology_evidence)
         if not problems:
             return answer, [e.get("profile_id", "?") for e in neighbours]
         if attempt == 0:

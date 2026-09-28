@@ -21,7 +21,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from agent_autosuggest import lake_bus, validate, workspace
+from agent_autosuggest import lake_bus, methodologies, validate, workspace
 from agent_autosuggest.agent import PROMPT_VERSION, suggest
 from agent_autosuggest.retrieval import Corpus
 
@@ -33,6 +33,7 @@ class Settings:
         self.corpus_path = Path(
             os.environ.get("AUTOSUGGEST_CORPUS", "/app/corpus/autosuggest-sft-v1.jsonl"))
         self.model = os.environ.get("AUTOSUGGEST_MODEL", "gpt-4o")
+        self.lake_url = os.environ.get("LAKE_URL", "")
         self.token = os.environ.get("AGENT_SERVICE_TOKEN", "")
         self.trace_dir = Path(os.environ.get("TRACE_DIR", "/tmp/agent-autosuggest-traces"))
         self.shots = int(os.environ.get("AUTOSUGGEST_SHOTS", "3"))
@@ -52,7 +53,8 @@ def profile_from_turn(turn: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
-             client: OpenAI | None = None, get: workspace.Get | None = None) -> dict[str, Any]:
+             client: OpenAI | None = None, get: workspace.Get | None = None,
+             query: methodologies.Query | None = None) -> dict[str, Any]:
     profile = profile_from_turn(turn)
     if profile is None and turn.get("zetta_base_url") and turn.get("zetta_token"):
         # Scan my workspace (lake#269): read the workspace with the turn's read-only credential.
@@ -62,17 +64,33 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
             return {"ok": False, "error": "the workspace has no datasets yet: load data first"}
     if profile is None:
         return {"ok": False, "error": "a turn needs a profile with its tables or connections"}
+
+    if query is None:
+        lake_url = turn.get("lake_url") or settings.lake_url
+        lake_token = turn.get("lake_token")
+        customer_id = turn.get("customer_id")
+        if lake_url and lake_token and customer_id:
+            query = workspace.make_query(lake_url, lake_token, customer_id)
+    try:
+        methodology_evidence = methodologies.inspect(profile, query)
+    except workspace.CapabilityError as error:
+        return {"ok": False, "error": f"{error.code}: {error}"}
     answer, used = suggest(profile, corpus, client or OpenAI(), turn.get("model") or settings.model,
-                           settings.shots)
+                           settings.shots, methodology_evidence)
     if answer is None:
         return {"ok": False, "error": "no parseable project profile came back"}
-    result = {"project_profile": answer, "few_shot_from": used,
-              "prompt_version": PROMPT_VERSION, "defects": validate.defects(answer)}
+    result = {
+        "project_profile": answer,
+        "few_shot_from": used,
+        "prompt_version": PROMPT_VERSION,
+        "defects": validate.defects(answer, methodology_evidence),
+    }
     trace_id = str(uuid.uuid4())
     settings.trace_dir.mkdir(parents=True, exist_ok=True)
     (settings.trace_dir / f"{trace_id}.json").write_text(json.dumps(
         {"trace_id": trace_id, "agent": "agent-autosuggest",
-         "at": datetime.now(timezone.utc).isoformat(), "profile": profile, "result": result},
+         "at": datetime.now(timezone.utc).isoformat(), "profile": profile,
+         "methodology_evidence": methodology_evidence, "result": result},
         indent=1, default=str))
     return {"ok": True, "trace_id": trace_id, "result": result}
 
