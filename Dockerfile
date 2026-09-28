@@ -14,10 +14,10 @@ RUN useradd --uid 10001 --create-home agent
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY --from=catalog catalog.json catalog.source.json /app/catalog/
-COPY --from=corpus autosuggest-sft-v1.jsonl /app/corpus/autosuggest-sft-v1.jsonl
+COPY --from=corpus autosuggest-sft-v3.jsonl /app/corpus/autosuggest-sft-v3.jsonl
 ENV PATH=/app/.venv/bin:$PATH \
     ZETTA_CATALOG=/app/catalog/catalog.json \
-    AUTOSUGGEST_CORPUS=/app/corpus/autosuggest-sft-v1.jsonl \
+    AUTOSUGGEST_CORPUS=/app/corpus/autosuggest-sft-v3.jsonl \
     TRACE_DIR=/tmp/agent-autosuggest-traces \
     PORT=8080
 USER 10001

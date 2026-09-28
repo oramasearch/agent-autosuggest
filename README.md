@@ -16,7 +16,7 @@ a training run. See [`zetta-bridge/docs/agent-scaffold.md`](../../docs/agent-sca
 
 ```bash
 export OPENAI_API_KEY=...
-export AUTOSUGGEST_CORPUS=../agent-autosuggest-corpus/corpus/autosuggest-sft-v1.jsonl
+export AUTOSUGGEST_CORPUS=../agent-autosuggest-corpus/corpus/autosuggest-sft-v3.jsonl
 uv run agent-autosuggest path/to/profile.json
 ```
 

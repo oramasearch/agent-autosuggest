@@ -31,7 +31,7 @@ class Settings:
 
     def __init__(self) -> None:
         self.corpus_path = Path(
-            os.environ.get("AUTOSUGGEST_CORPUS", "/app/corpus/autosuggest-sft-v1.jsonl"))
+            os.environ.get("AUTOSUGGEST_CORPUS", "/app/corpus/autosuggest-sft-v3.jsonl"))
         self.model = os.environ.get("AUTOSUGGEST_MODEL", "gpt-4o")
         self.lake_url = os.environ.get("LAKE_URL", "")
         self.token = os.environ.get("AGENT_SERVICE_TOKEN", "")
