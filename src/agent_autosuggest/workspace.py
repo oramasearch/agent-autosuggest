@@ -92,6 +92,38 @@ def make_query(lake_url: str, token: str, customer_id: str,
     return query
 
 
+def make_lake_query(lake_url: str, token: str, customer_id: str,
+                    get: Get | None = None) -> Callable[[str, dict[str, Any]], dict[str, Any]]:
+    """Build a read-only caller for lake capabilities exposed as GET ``/v1/<name>``."""
+    send = get or _urllib_get
+    base = lake_url.rstrip("/")
+
+    def query(capability: str, inputs: dict[str, Any]) -> dict[str, Any]:
+        arguments = {"customer_id": customer_id, **inputs}
+        encoded = {
+            key: value if isinstance(value, str) else json.dumps(value)
+            for key, value in arguments.items()
+        }
+        url = f"{base}/v1/{capability}?{urllib.parse.urlencode(encoded)}"
+        answer = send(url, token)
+        if not isinstance(answer, dict) or not answer.get("ok"):
+            error = answer.get("error") if isinstance(answer, dict) else None
+            error = error if isinstance(error, dict) else {}
+            raise CapabilityError(
+                str(error.get("code") or "store_error"),
+                str(error.get("message") or f"{capability} failed"),
+            )
+        value = answer.get("value")
+        if not isinstance(value, dict):
+            raise CapabilityError(
+                "invalid_response",
+                f"{capability} returned no object value",
+            )
+        return value
+
+    return query
+
+
 def read_profile(base_url: str, token: str, get: Get | None = None) -> dict[str, Any]:
     """The workspace's datasets as a profile. An unreadable dataset keeps its name, no columns."""
     get = get or _urllib_get
