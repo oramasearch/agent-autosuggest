@@ -62,17 +62,25 @@ def built_catalogue(tmp_path, monkeypatch):
 
 class ScriptedClient:
     def __init__(self, content: str) -> None:
-        reply = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=lambda **_: reply))
+        self.reply = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+        )
+        self.calls = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self.create))
+
+    def create(self, **arguments):
+        self.calls.append(arguments)
+        return self.reply
 
 
 class FakeEngine:
     """A lake/Zetta read client with a current registry and per-dataset evidence."""
 
-    def __init__(self, methodologies, analyses=None, plans=None):
+    def __init__(self, methodologies, analyses=None, plans=None, solution_entries=None):
         self.methodologies = methodologies
         self.analyses = analyses or {}
         self.plans = plans or {}
+        self.solution_entries = solution_entries
         self.calls: list[tuple[str, dict]] = []
 
     def query(self, capability, inputs):
@@ -83,6 +91,17 @@ class FakeEngine:
             return self.analyses.get(inputs["dataset"], {})
         if capability == "plan_features":
             return self.plans.get((inputs["dataset"], inputs["methodology"]), {"ready": True})
+        if capability == "list_solutions":
+            if self.solution_entries is None:
+                raise workspace.CapabilityError("unknown_capability", "not deployed")
+            return {"solutions": self.solution_entries}
+        if capability == "get_solution":
+            solution = next(
+                entry
+                for entry in self.solution_entries or []
+                if entry["id"] == inputs["solution"]
+            )
+            return {"solution": solution}
         raise AssertionError(f"unexpected capability {capability}")
 
 
@@ -100,6 +119,69 @@ NEXT_BEST_ACTION = {
     "runnable": False,
     "partial": False,
     "issue": "zetta#1042",
+}
+RUNNABLE_SEGMENTATION_SOLUTION = {
+    "id": "S-3",
+    "name": "Customer segmentation",
+    "promise": "Group customers into useful operating cohorts.",
+    "use_case": "Customer planning",
+    "composition": [
+        {"methodology": "M-3", "role": "primary", "minimum_level": 1},
+    ],
+    "capability_levels": [
+        {"level": 1, "name": "insight", "description": "Describe cohorts"},
+    ],
+    "required_data_roles": [
+        {"role": "entity", "required": True, "description": "customer"},
+    ],
+    "action_patterns": ["report"],
+    "missing_components": [],
+    "status": "catalogue",
+    "runnable": True,
+    "issue": "",
+    "promotion_condition": "",
+}
+MISSING_ACTION_SOLUTION = {
+    "id": "S-7",
+    "name": "Next best action",
+    "promise": "Choose a governed action for each account.",
+    "use_case": "Account action planning",
+    "composition": [
+        {"methodology": "M-7", "role": "primary", "minimum_level": 1},
+    ],
+    "capability_levels": [
+        {"level": 1, "name": "insight", "description": "Recommend actions"},
+    ],
+    "required_data_roles": [
+        {"role": "entity", "required": True, "description": "account"},
+    ],
+    "action_patterns": ["tasks"],
+    "missing_components": [
+        {"id": "policy", "name": "decision policy", "issue": "zetta#1104"},
+    ],
+    "status": "catalogue",
+    "runnable": False,
+    "issue": "zetta#1116",
+    "promotion_condition": "",
+}
+INDUSTRIAL_SKETCH = {
+    "id": "B-1",
+    "name": "Industrial optimization",
+    "promise": "Coordinate bounded production decisions.",
+    "use_case": "Production planning",
+    "composition": [
+        {"methodology": "M-3", "role": "primary", "minimum_level": 1},
+    ],
+    "capability_levels": [],
+    "required_data_roles": [
+        {"role": "entity", "required": True, "description": "production run"},
+    ],
+    "action_patterns": [],
+    "missing_components": [],
+    "status": "sketch",
+    "runnable": False,
+    "issue": "zetta#1140",
+    "promotion_condition": "promote with a design customer and safety review",
 }
 
 
@@ -213,6 +295,123 @@ def test_customer_table_without_a_label_suggests_runnable_segmentation(tmp_path)
     assert ("plan_features", {"dataset": "customers", "methodology": "M-3"}) in engine.calls
 
 
+def test_solution_registry_suggests_a_runnable_solution_at_a_level(tmp_path):
+    engine = FakeEngine(
+        [SEGMENTATION],
+        analyses={"customers": {"grain": "snapshot", "keys": ["customer_id"]}},
+        plans={("customers", "M-3"): {"ready": True}},
+        solution_entries=[RUNNABLE_SEGMENTATION_SOLUTION],
+    )
+    reply = json.dumps({
+        "suggested": [{
+            "intent": "segment customers",
+            "solution": "S-3",
+            "level": 1,
+            "methodologies": ["M-3"],
+            "runnable": True,
+            "why_this_data_supports_it": "customers is one row per customer_id",
+        }],
+        "declined": [],
+    })
+
+    client = ScriptedClient(reply)
+    answer = service.run_turn(
+        {"profile": CUSTOMERS_WITHOUT_LABEL},
+        settings(tmp_path),
+        Corpus(tmp_path / "missing.jsonl"),
+        client,
+        query=engine.query,
+    )
+
+    opportunity = answer["result"]["project_profile"]["suggested"][0]
+    assert opportunity["solution"] == "S-3"
+    assert opportunity["level"] == 1
+    assert opportunity["methodologies"] == ["M-3"]
+    assert opportunity["runnable"] is True
+    assert answer["result"]["prompt_version"] == "v3"
+    assert answer["result"]["defects"] == []
+    assert ("list_solutions", {}) in engine.calls
+    assert ("get_solution", {"solution": "S-3"}) in engine.calls
+    system_prompt = client.calls[0]["messages"][0]["content"]
+    assert RUNNABLE_SEGMENTATION_SOLUTION["use_case"] in system_prompt
+    assert '"required_data_roles"' in system_prompt
+
+
+def test_solution_with_missing_components_is_not_presented_as_ready(tmp_path):
+    engine = FakeEngine(
+        [NEXT_BEST_ACTION],
+        solution_entries=[MISSING_ACTION_SOLUTION],
+    )
+    reply = json.dumps({
+        "suggested": [{
+            "intent": "choose the next action",
+            "solution": "S-7",
+            "level": 1,
+            "methodologies": ["M-7"],
+            "runnable": True,
+            "why_this_data_supports_it": "customers has account attributes",
+        }],
+        "declined": [],
+    })
+
+    answer = service.run_turn(
+        {"profile": CUSTOMERS_WITHOUT_LABEL},
+        settings(tmp_path),
+        Corpus(tmp_path / "missing.jsonl"),
+        ScriptedClient(reply),
+        query=engine.query,
+    )
+
+    profile = answer["result"]["project_profile"]
+    assert profile["suggested"] == []
+    declined = profile["declined"][0]
+    assert declined["solution"] == "S-7"
+    assert declined["methodologies"] == ["M-7"]
+    assert declined["runnable"] is False
+    assert declined["answer"] == "not supported yet"
+    assert declined["reason"] == (
+        "the pipeline builds; production operation needs decision policy (zetta#1104)"
+    )
+    assert answer["result"]["defects"] == []
+
+
+def test_a_band_b_sketch_is_refused_with_its_promotion_condition(tmp_path):
+    engine = FakeEngine(
+        [SEGMENTATION],
+        solution_entries=[INDUSTRIAL_SKETCH],
+    )
+    reply = json.dumps({
+        "suggested": [{
+            "intent": "optimize production",
+            "solution": "B-1",
+            "level": 1,
+            "methodologies": ["M-3"],
+            "runnable": True,
+            "why_this_data_supports_it": "customers stands in for production runs",
+        }],
+        "declined": [],
+    })
+
+    answer = service.run_turn(
+        {"profile": CUSTOMERS_WITHOUT_LABEL},
+        settings(tmp_path),
+        Corpus(tmp_path / "missing.jsonl"),
+        ScriptedClient(reply),
+        query=engine.query,
+    )
+
+    profile = answer["result"]["project_profile"]
+    assert profile["suggested"] == []
+    declined = profile["declined"][0]
+    assert declined["solution"] == "B-1"
+    assert declined["runnable"] is False
+    assert declined["answer"] == "not supported yet"
+    assert "sketch" in declined["reason"]
+    assert INDUSTRIAL_SKETCH["promotion_condition"] in declined["reason"]
+    assert "zetta#1140" in declined["reason"]
+    assert answer["result"]["defects"] == []
+
+
 def test_unsupported_suggestion_is_declined_with_its_issue(tmp_path):
     engine = FakeEngine([SEGMENTATION, NEXT_BEST_ACTION])
     reply = json.dumps({
@@ -272,7 +471,7 @@ def test_old_engine_fallback_allows_only_m1(tmp_path):
     assert opportunity["methodology"] == "M-1"
     assert opportunity["runnable"] is True
     assert answer["result"]["defects"] == []
-    assert calls == [("list_methodologies", {})]
+    assert calls == [("list_methodologies", {}), ("list_solutions", {})]
 
 
 def test_old_engine_fallback_declines_every_methodology_except_m1(tmp_path):
@@ -304,7 +503,7 @@ def test_old_engine_fallback_declines_every_methodology_except_m1(tmp_path):
     assert answer["result"]["defects"] == []
 
 
-def test_event_logs_are_declined_with_the_required_transform(tmp_path):
+def test_solution_is_declined_when_its_data_requires_a_transform(tmp_path):
     engine = FakeEngine(
         [SEGMENTATION],
         analyses={"events": {"grain": "event", "keys": ["account_id", "occurred_at"]}},
@@ -312,12 +511,14 @@ def test_event_logs_are_declined_with_the_required_transform(tmp_path):
             "status": "transform_first",
             "reason": "aggregate events to one row per account_id and cutoff",
         }},
+        solution_entries=[RUNNABLE_SEGMENTATION_SOLUTION],
     )
     reply = json.dumps({
         "suggested": [{
             "intent": "segment accounts",
             "solution": "S-3",
-            "methodology": "M-3",
+            "level": 1,
+            "methodologies": ["M-3"],
             "runnable": True,
             "why_this_data_supports_it": "events has account_id and event_name",
         }],
@@ -336,6 +537,7 @@ def test_event_logs_are_declined_with_the_required_transform(tmp_path):
     declined = profile["declined"][0]
     assert declined["answer"] == "transform first"
     assert declined["runnable"] is True
+    assert declined["methodologies"] == ["M-3"]
     assert declined["reason"] == (
         "transform first: aggregate events to one row per account_id and cutoff"
     )

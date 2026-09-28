@@ -21,6 +21,10 @@ Feature preparation still comes from the methodology evidence. If any methodolog
 chosen level requires a transform for every candidate dataset, the whole solution is declined with
 `transform first` and the concrete preparation instruction.
 
+The runtime prompt is `v3`. Deterministic cases in `evals/runtime-solutions.jsonl` cover runnable,
+missing-foundation, sketch, and transform-first outputs. The test suite applies the same enforcement
+and validation path used by a service turn to every case.
+
 If `list_solutions` answers `unknown_capability`, Auto-Suggest uses the legacy runtime-methodology
 contract documented in [`../methodologies/runtime-methodologies.md`](../methodologies/runtime-methodologies.md).
 That compatibility path preserves the single `methodology` field and the conservative M-1 fallback.
