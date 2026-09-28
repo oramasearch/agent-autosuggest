@@ -5,20 +5,23 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agent_autosuggest import catalog, methodologies, solutions
+from agent_autosuggest import apps, catalog, methodologies, solutions
 
 
 def defects(
     answer: dict[str, Any],
     evidence: dict[str, Any] | None = None,
     solution_evidence: dict[str, Any] | None = None,
+    app_evidence: dict[str, Any] | None = None,
 ) -> list[str]:
     """Everything wrong with this project profile. Empty means it is usable."""
     solution_evidence = solution_evidence or solutions.inspect(None)
     if solutions.is_current(solution_evidence):
-        return _solution_defects(answer, solution_evidence)
-
-    return _methodology_defects(answer, evidence)
+        problems = _solution_defects(answer, solution_evidence)
+    else:
+        problems = _methodology_defects(answer, evidence)
+    apps.add_defects(answer, app_evidence, problems)
+    return problems
 
 
 def _methodology_defects(

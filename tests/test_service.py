@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_autosuggest import catalog, service, workspace
+from agent_autosuggest import apps, catalog, service, workspace
 from agent_autosuggest.retrieval import Corpus
 
 PROFILE = {"industry": "saas", "persona": "head of customer success",
@@ -103,6 +103,30 @@ class FakeEngine:
             )
             return {"solution": solution}
         raise AssertionError(f"unexpected capability {capability}")
+
+
+class FakeLakeState:
+    """The direct lake App/build read surface handed to one Auto-Suggest turn."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, dict]] = []
+
+    def query(self, capability, inputs):
+        self.calls.append((capability, inputs))
+        if capability == "list_apps":
+            return {"apps": [{"id": "app-1", "name": "revenue-dashboard"}]}
+        if capability == "get_app":
+            return {"id": inputs["app_id"], "name": "revenue-dashboard", "phase": "Running"}
+        if capability == "receive_app_events":
+            return {"events": [{"sequence": 2, "status": {"phase": "Running"}}],
+                    "next_sequence": 3}
+        if capability == "list_builds":
+            return {"builds": [{"id": "build-1", "phase": "Succeeded"}]}
+        if capability == "get_build":
+            return {"id": inputs["build_id"], "phase": "Succeeded", "target": "revenue:v1"}
+        if capability == "receive_build_events":
+            return {"events": [{"sequence": 4, "type": "done"}], "next_sequence": 5}
+        raise AssertionError(f"unexpected lake capability {capability}")
 
 
 SEGMENTATION = {
@@ -328,13 +352,80 @@ def test_solution_registry_suggests_a_runnable_solution_at_a_level(tmp_path):
     assert opportunity["level"] == 1
     assert opportunity["methodologies"] == ["M-3"]
     assert opportunity["runnable"] is True
-    assert answer["result"]["prompt_version"] == "v3"
+    assert answer["result"]["prompt_version"] == "v4"
     assert answer["result"]["defects"] == []
     assert ("list_solutions", {}) in engine.calls
     assert ("get_solution", {"solution": "S-3"}) in engine.calls
     system_prompt = client.calls[0]["messages"][0]["content"]
     assert RUNNABLE_SEGMENTATION_SOLUTION["use_case"] in system_prompt
     assert '"required_data_roles"' in system_prompt
+
+
+def test_data_app_opportunity_uses_lake_state_and_stays_a_confirmed_proposal(tmp_path):
+    engine = FakeEngine(
+        [SEGMENTATION],
+        analyses={"customers": {"grain": "snapshot", "keys": ["customer_id"]}},
+        plans={("customers", "M-3"): {"ready": True}},
+        solution_entries=[RUNNABLE_SEGMENTATION_SOLUTION],
+    )
+    lake = FakeLakeState()
+    reply = json.dumps({
+        "suggested": [{
+            "intent": "explore customer segments",
+            "solution": "S-3",
+            "level": 1,
+            "methodologies": ["M-3"],
+            "runnable": True,
+            "why_this_data_supports_it": "customers has country and spend per customer_id",
+            "delivery": {
+                "kind": "app",
+                "shows": "segment size, country mix, spend, and customer drill-downs",
+                "agent": "another-agent",
+                "turn_kind": "api",
+                "status": "created",
+                "confirmation_required": False,
+                "proposed_actions": ["create_app", "deploy_app", "workspace_act"],
+            },
+        }],
+        "declined": [],
+    })
+    client = ScriptedClient(reply)
+
+    answer = service.run_turn(
+        {"profile": CUSTOMERS_WITHOUT_LABEL},
+        settings(tmp_path),
+        Corpus(tmp_path / "missing.jsonl"),
+        client,
+        query=engine.query,
+        lake_query=lake.query,
+    )
+
+    assert answer["ok"], answer
+    delivery = answer["result"]["project_profile"]["suggested"][0]["delivery"]
+    assert delivery == {
+        "kind": "app",
+        "shows": "segment size, country mix, spend, and customer drill-downs",
+        "agent": "agent-application",
+        "turn_kind": "app",
+        "status": "proposed",
+        "confirmation_required": True,
+        "proposed_actions": ["create_app", "deploy_app"],
+    }
+    assert answer["result"]["defects"] == []
+    assert [capability for capability, _ in lake.calls] == [
+        "list_apps",
+        "list_builds",
+        "get_app",
+        "receive_app_events",
+        "get_build",
+        "receive_build_events",
+    ]
+    assert all(capability in apps.READ_CAPABILITIES for capability, _ in lake.calls)
+    system_prompt = client.calls[0]["messages"][0]["content"]
+    assert "revenue-dashboard" in system_prompt
+    assert "agent-application" in system_prompt
+    trace = json.loads((tmp_path / "traces" / f"{answer['trace_id']}.json").read_text())
+    assert trace["app_evidence"]["apps"][0]["app"]["id"] == "app-1"
 
 
 def test_solution_with_missing_components_is_not_presented_as_ready(tmp_path):
