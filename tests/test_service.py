@@ -651,3 +651,41 @@ def test_workspace_query_uses_lakes_capability_envelope():
         "lat.secret",
         {"customer_id": "customer-1", "capability": "list_methodologies", "input": {}},
     )]
+
+
+def test_a_turn_calls_its_model_through_lakes_gateway_with_the_turns_key(tmp_path, monkeypatch):
+    """lake#248: the model is lake's `/openai/v1`, with the turn's own key, never a provider key."""
+    import httpx
+
+    from agent_autosuggest import model
+
+    reply = json.dumps({"suggested": [], "declined": []})
+    seen: list[httpx.Request] = []
+
+    def gateway(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={
+            "id": "chatcmpl-1", "object": "chat.completion", "created": 0, "model": "gpt-4o",
+            "choices": [{"index": 0, "finish_reason": "stop",
+                         "message": {"role": "assistant", "content": reply}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12}})
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(service, "gateway_client", lambda url, token: model.gateway_client(
+        url, token, http_client=httpx.Client(transport=httpx.MockTransport(gateway))))
+    engine = FakeEngine([])
+    answer = service.run_turn(
+        {"context": {"profile": PROFILE}, "lake_url": "http://lake:8080",
+         "lake_token": "lat.task.secret", "customer_id": "c"},
+        settings(tmp_path), Corpus(tmp_path / "missing.jsonl"), None,
+        query=engine.query, lake_query=FakeLakeState().query)
+    assert answer["ok"], answer
+    assert [str(request.url) for request in seen] == ["http://lake:8080/openai/v1/chat/completions"]
+    assert seen[0].headers["authorization"] == "Bearer lat.task.secret"
+
+    # No lake credential: the turn is refused rather than sent to a provider directly.
+    refused = service.run_turn({"context": {"profile": PROFILE}}, settings(tmp_path),
+                               Corpus(tmp_path / "missing.jsonl"), None,
+                               query=engine.query, lake_query=FakeLakeState().query)
+    assert not refused["ok"] and "lake_token" in refused["error"]
+    assert len(seen) == 1
