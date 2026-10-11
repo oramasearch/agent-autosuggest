@@ -21,6 +21,7 @@ from openai import OpenAI
 
 from agent_autosuggest import apps, lake_bus, methodologies, solutions, validate, workspace
 from agent_autosuggest.agent import PROMPT_VERSION, suggest
+from agent_autosuggest.model import gateway_client
 from agent_autosuggest.retrieval import Corpus
 
 
@@ -79,10 +80,19 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
         app_evidence = apps.inspect(lake_query)
     except workspace.CapabilityError as error:
         return {"ok": False, "error": f"{error.code}: {error}"}
+    if client is None:
+        # The model is reached through lake with the turn's own key, which counts its tokens in
+        # the turn's workspace (lake#248); this agent holds no provider key.
+        model_url = turn.get("lake_url") or settings.lake_url
+        model_key = turn.get("lake_token") or turn.get("zetta_token")
+        if not model_url or not model_key:
+            return {"ok": False, "error": "a turn needs lake_url and its lake_token to reach the "
+                                          "model through lake"}
+        client = gateway_client(model_url, model_key)
     answer, used = suggest(
         profile,
         corpus,
-        client or OpenAI(),
+        client,
         turn.get("model") or settings.model,
         settings.shots,
         methodology_evidence,
