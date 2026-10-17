@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from importlib.metadata import PackageNotFoundError, version
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -126,12 +127,19 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
     return {"ok": True, "trace_id": trace_id, "result": result}
 
 
+def _version() -> str:
+    try:
+        return version("agent-autosuggest")
+    except PackageNotFoundError:
+        return "unknown"
+
+
 def health(settings: Settings, corpus: Corpus) -> tuple[int, dict[str, Any]]:
     """Unhealthy without the corpus: answering zero-shot is a different agent."""
     if not corpus.examples:
         return 503, {"ok": False, "error": f"no corpus at {settings.corpus_path}"}
     return 200, {"ok": True, "agent": "agent-autosuggest", "examples": len(corpus.examples),
-                 "model": settings.model}
+                 "model": settings.model, "version": _version()}
 
 
 def make_handler(settings: Settings, corpus: Corpus) -> type[BaseHTTPRequestHandler]:

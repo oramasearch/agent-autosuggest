@@ -241,6 +241,17 @@ def test_health_fails_without_the_corpus(tmp_path):
     assert status == 503 and not body["ok"]
 
 
+def test_health_reports_the_installed_version(tmp_path):
+    from importlib.metadata import version
+
+    corpus_file = tmp_path / "corpus.jsonl"
+    corpus_file.write_text(json.dumps({"profile_id": "p1", "industry": "retail",
+                                       "tables": [{"name": "orders", "columns": ["id"]}],
+                                       "project_profile": {}}) + "\n")
+    status, body = service.health(settings(tmp_path), Corpus(corpus_file))
+    assert status == 200 and body["version"] == version("agent-autosuggest")
+
+
 class FakeWorkspace:
     """lake's workspace path: list_datasets and get_dataset, recording what was asked."""
 
