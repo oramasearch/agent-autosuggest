@@ -1,5 +1,7 @@
 # agent-autosuggest
 
+Current release: [v0.1.0](docs/releases/v0.1.0.md) (every release: [`docs/releases/`](docs/releases/README.md)).
+
 Reads a **profile** — a business situation and its data — and proposes what is worth building.
 
 The output is a **project profile**: the same object `agent-project` consumes, so the two compose
@@ -33,7 +35,7 @@ Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.c
 
 | Route | What it does |
 |---|---|
-| `GET /healthz` | `200` with the corpus size, or `503` when the corpus is missing |
+| `GET /healthz` | `200` with the corpus size, model and package version, or `503` when the corpus is missing |
 | `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
 
 **Scan my workspace** (lake#269) hands it no profile. Instead it gets `zetta_base_url` (lake's
