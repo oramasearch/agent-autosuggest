@@ -213,6 +213,7 @@ def settings(tmp_path: Path) -> service.Settings:
     value = service.Settings()
     value.trace_dir = tmp_path / "traces"
     value.corpus_path = tmp_path / "missing.jsonl"
+    value.lake_url = "http://lake"
     return value
 
 
@@ -685,10 +686,13 @@ def test_a_turn_calls_its_model_through_lakes_gateway_with_the_turns_key(tmp_pat
     monkeypatch.setattr(service, "gateway_client", lambda url, token: model.gateway_client(
         url, token, http_client=httpx.Client(transport=httpx.MockTransport(gateway))))
     engine = FakeEngine([])
+    configured = settings(tmp_path)
+    configured.lake_url = "http://lake:8080"
+    # The turn's own lake_url is never used: the key goes to this service's LAKE_URL (#21).
     answer = service.run_turn(
-        {"context": {"profile": PROFILE}, "lake_url": "http://lake:8080",
+        {"context": {"profile": PROFILE}, "lake_url": "http://elsewhere:9",
          "lake_token": "lat.task.secret", "customer_id": "c"},
-        settings(tmp_path), Corpus(tmp_path / "missing.jsonl"), None,
+        configured, Corpus(tmp_path / "missing.jsonl"), None,
         query=engine.query, lake_query=FakeLakeState().query)
     assert answer["ok"], answer
     assert [str(request.url) for request in seen] == ["http://lake:8080/openai/v1/chat/completions"]
@@ -699,4 +703,14 @@ def test_a_turn_calls_its_model_through_lakes_gateway_with_the_turns_key(tmp_pat
                                Corpus(tmp_path / "missing.jsonl"), None,
                                query=engine.query, lake_query=FakeLakeState().query)
     assert not refused["ok"] and "lake_token" in refused["error"]
+    assert len(seen) == 1
+
+    # No LAKE_URL: the turn is refused, whatever lake_url it names.
+    configured.lake_url = ""
+    refused = service.run_turn(
+        {"context": {"profile": PROFILE}, "lake_url": "http://lake:8080",
+         "lake_token": "lat.task.secret", "customer_id": "c"},
+        configured, Corpus(tmp_path / "missing.jsonl"), None,
+        query=engine.query, lake_query=FakeLakeState().query)
+    assert not refused["ok"] and "LAKE_URL is not set" in refused["error"]
     assert len(seen) == 1
