@@ -49,20 +49,26 @@ before a request is made. With `LAKE_URL` unset, every turn that would send a cr
 `/workspaces/<customer>/zetta` path) and a read-only task credential as `zetta_token`, and
 `workspace.py` reads the profile itself: every dataset's database, name, columns and rows, up to
 twelve, via `list_datasets` and `get_dataset`, the shape lake used to build. A workspace with no
-datasets is told to load data first. The credential never reaches a trace.
+datasets is told to load data first. The credential never reaches the answer or the model's messages.
 
 **Turns arrive on lake's agent bus** (lake `docs/api/agent-bus.md`). `lake_bus.py` long-polls
 `receive_agent_tasks` through lake with this agent's own bus credential (`AGENT_BUS_TOKEN`). It
 claims each task, runs it as `/v1/turn` would, and publishes `progress`, then the answer or
 `failed`. It starts when the operator sets `LAKE_URL`, `AGENT_BUS_TOKEN` and `AGENT_BUS_AGENT`.
 `AGENT_SERVICE_TOKEN` is required as a bearer, compared in constant time (`401` otherwise), and
-with it unset or empty the route fails closed (`503` for every turn); every turn is a trace in `TRACE_DIR`;
+with it unset or empty the route fails closed (`503` for every turn); nothing about a turn is written to the pod's disk;
 `AUTOSUGGEST_MODEL` picks the model. **The model is reached through lake** (lake#248, lake
 `docs/api/model-gateway.md`): every call goes to `<LAKE_URL>/openai/v1` with the turn's own
 `lake_token` as the API key (`model.py`), so lake counts its tokens in the turn's workspace and
 enforces the account's model-token limit. The service holds no `OPENAI_API_KEY`; a turn without a
 lake credential is refused. Only the command line above, which runs for no workspace, calls OpenAI
 directly with your own key.
+
+**A turn keeps nothing on the pod** (agent-autosuggest#13). The pod serves every workspace, and a
+turn's profile (rows from up to twelve datasets), evidence and answer are that workspace's content,
+which belongs in its workspace Zetta. So no trace file is written: the answer goes back on the bus
+(or the `/v1/turn` response), and lake stores it, with its `trace_id`, in the turn's workspace.
+`TRACE_DIR` is no longer read.
 
 **Solutions and methodologies are read from the engine for every turn.** Auto-Suggest calls lake's
 `workspace_query` for `list_solutions` and `list_methodologies`. A current-engine Opportunity names

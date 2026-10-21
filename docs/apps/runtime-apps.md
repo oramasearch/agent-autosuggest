@@ -3,7 +3,7 @@
 Auto-Suggest reads Ship App state directly from lake on every turn. These are lake control-plane
 capabilities, so they use authenticated `GET /v1/<capability>` calls rather than the workspace
 engine's `workspace_query`. Every call includes the turn's `customer_id`, and the task credential
-is never written to a trace.
+is never written to the answer or put in the model's messages.
 
 The read-only snapshot begins with `list_apps` and `list_builds`. For up to twelve returned Apps
 and twelve builds, it follows with `get_app` or `get_build` and a non-blocking event read through
@@ -25,8 +25,8 @@ fields to `agent-application`, `app`, `proposed`, and `true`, and removes action
 documented proposal vocabulary before validation.
 
 The runtime prompt is `v5`. App contract cases in `evals/data-apps.jsonl` run through the same
-enforcement and validation used by a service turn. The service trace includes the App/build
-evidence but never the task credential.
+enforcement and validation used by a service turn. The App/build evidence lives only for the turn;
+nothing is written to the pod's disk.
 
 If both list capabilities are unknown, Auto-Suggest records an empty compatibility snapshot. Other
 list failures surface as turn failures because silently treating an authorization or store problem

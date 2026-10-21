@@ -14,7 +14,6 @@ import json
 import os
 import uuid
 from importlib.metadata import PackageNotFoundError, version
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -37,7 +36,6 @@ class Settings:
         self.model = os.environ.get("AUTOSUGGEST_MODEL", "gpt-4o")
         self.lake_url = os.environ.get("LAKE_URL", "")
         self.token = os.environ.get("AGENT_SERVICE_TOKEN", "")
-        self.trace_dir = Path(os.environ.get("TRACE_DIR", "/tmp/agent-autosuggest-traces"))
         self.shots = int(os.environ.get("AUTOSUGGEST_SHOTS", "3"))
 
 
@@ -176,16 +174,10 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
             app_evidence,
         ),
     }
+    # The trace id names the turn; lake stores it with the answer in the turn's workspace Zetta.
+    # Nothing is written to the pod's disk: the pod serves every tenant, and the profile, the
+    # evidence and the answer are workspace content (agent-autosuggest#13).
     trace_id = str(uuid.uuid4())
-    settings.trace_dir.mkdir(parents=True, exist_ok=True)
-    (settings.trace_dir / f"{trace_id}.json").write_text(json.dumps(
-        {"trace_id": trace_id, "agent": "agent-autosuggest",
-         "at": datetime.now(timezone.utc).isoformat(), "profile": profile,
-         "methodology_evidence": methodology_evidence,
-         "solution_evidence": solution_evidence,
-         "app_evidence": app_evidence,
-         "result": result},
-        indent=1, default=str))
     return {"ok": True, "trace_id": trace_id, "result": result}
 
 
