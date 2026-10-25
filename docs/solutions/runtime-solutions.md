@@ -3,7 +3,7 @@
 Auto-Suggest reads the customer's solution registry through lake's `workspace_query` on every
 turn. `list_solutions` supplies the catalogue considered by the model. After the model selects an
 entry, `get_solution` supplies the full record used for enforcement. The selected detail is kept
-only in that turn's evidence and trace; a later turn reads the registry again.
+only in that turn's evidence; a later turn reads the registry again.
 
 Zetta currently names detailed fields `capability_levels`, `required_data_roles`, and
 `missing_components`. Auto-Suggest also accepts the shorter `levels`, `data_roles`, and `missing`
