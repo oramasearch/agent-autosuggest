@@ -24,7 +24,7 @@ contains only registered App or build action names. Auto-Suggest deterministical
 fields to `agent-application`, `app`, `proposed`, and `true`, and removes action names outside its
 documented proposal vocabulary before validation.
 
-The runtime prompt is `v4`. App contract cases in `evals/data-apps.jsonl` run through the same
+The runtime prompt is `v5`. App contract cases in `evals/data-apps.jsonl` run through the same
 enforcement and validation used by a service turn. The service trace includes the App/build
 evidence but never the task credential.
 
