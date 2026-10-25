@@ -38,6 +38,13 @@ Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.c
 | `GET /healthz` | `200` with the corpus size, model and package version, or `503` when the corpus is missing |
 | `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
 
+**A turn's credential goes only to Lake at this service's own `LAKE_URL`** (#21). The model gateway
+and lake's capabilities (`workspace_query`, `list_apps`, ...) are always reached at `LAKE_URL`; a
+turn's `lake_url` is ignored. The workspace address, `zetta_base_url`, is Lake's workspace route
+(`<LAKE_URL>/workspaces/<customer>/zetta`) and is accepted only on `LAKE_URL`'s origin (scheme, host
+and port) under its path, with no user info, query or fragment; any other address refuses the turn
+before a request is made. With `LAKE_URL` unset, every turn that would send a credential is refused.
+
 **Scan my workspace** (lake#269) hands it no profile. Instead it gets `zetta_base_url` (lake's
 `/workspaces/<customer>/zetta` path) and a read-only task credential as `zetta_token`, and
 `workspace.py` reads the profile itself: every dataset's database, name, columns and rows, up to
@@ -51,7 +58,7 @@ claims each task, runs it as `/v1/turn` would, and publishes `progress`, then th
 `AGENT_SERVICE_TOKEN` is required as a bearer, compared in constant time (`401` otherwise), and
 with it unset or empty the route fails closed (`503` for every turn); every turn is a trace in `TRACE_DIR`;
 `AUTOSUGGEST_MODEL` picks the model. **The model is reached through lake** (lake#248, lake
-`docs/api/model-gateway.md`): every call goes to `<lake_url>/openai/v1` with the turn's own
+`docs/api/model-gateway.md`): every call goes to `<LAKE_URL>/openai/v1` with the turn's own
 `lake_token` as the API key (`model.py`), so lake counts its tokens in the turn's workspace and
 enforces the account's model-token limit. The service holds no `OPENAI_API_KEY`; a turn without a
 lake credential is refused. Only the command line above, which runs for no workspace, calls OpenAI
