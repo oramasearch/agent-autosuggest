@@ -48,7 +48,8 @@ datasets is told to load data first. The credential never reaches a trace.
 `receive_agent_tasks` through lake with this agent's own bus credential (`AGENT_BUS_TOKEN`). It
 claims each task, runs it as `/v1/turn` would, and publishes `progress`, then the answer or
 `failed`. It starts when the operator sets `LAKE_URL`, `AGENT_BUS_TOKEN` and `AGENT_BUS_AGENT`.
-`AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
+`AGENT_SERVICE_TOKEN` is required as a bearer, compared in constant time (`401` otherwise), and
+with it unset or empty the route fails closed (`503` for every turn); every turn is a trace in `TRACE_DIR`;
 `AUTOSUGGEST_MODEL` picks the model. **The model is reached through lake** (lake#248, lake
 `docs/api/model-gateway.md`): every call goes to `<lake_url>/openai/v1` with the turn's own
 `lake_token` as the API key (`model.py`), so lake counts its tokens in the turn's workspace and
