@@ -61,7 +61,9 @@ directly with your own key.
 its S-n solution, selected level, composed methodology ids, and registry-derived `runnable` status.
 Entries with missing production components say that the pipeline builds but operation still needs
 the named components; Band-B sketches name their promotion condition and remain declined. It uses
-`analyze_dataset` and `plan_features` to decline data that must be transformed first. If
+`analyze_dataset` and `plan_features`: a composition every methodology plans `ready` on one dataset
+is suggested, with any preparation as a step of the project, and data that must be transformed first
+is declined naming the Lake capability that performs it (lake#1153). If
 `list_solutions` returns `unknown_capability`, the agent preserves the methodology-only behavior;
 if that registry is also unavailable, only M-1 is treated as runnable. See
 [`docs/solutions/runtime-solutions.md`](docs/solutions/runtime-solutions.md) and

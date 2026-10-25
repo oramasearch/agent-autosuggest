@@ -363,7 +363,7 @@ def test_solution_registry_suggests_a_runnable_solution_at_a_level(tmp_path):
     assert opportunity["level"] == 1
     assert opportunity["methodologies"] == ["M-3"]
     assert opportunity["runnable"] is True
-    assert answer["result"]["prompt_version"] == "v4"
+    assert answer["result"]["prompt_version"] == "v5"
     assert answer["result"]["defects"] == []
     assert ("list_solutions", {}) in engine.calls
     assert ("get_solution", {"solution": "S-3"}) in engine.calls
@@ -610,8 +610,15 @@ def test_solution_is_declined_when_its_data_requires_a_transform(tmp_path):
         [SEGMENTATION],
         analyses={"events": {"grain": "event", "keys": ["account_id", "occurred_at"]}},
         plans={("events", "M-3"): {
-            "status": "transform_first",
-            "reason": "aggregate events to one row per account_id and cutoff",
+            "status": "transform_required",
+            "transform_required": {
+                "name": "aggregate_events_to_entity",
+                "description": "aggregate events to one row per account_id and cutoff",
+                "performed_by": [
+                    {"capability": "workspace_sql", "does": "run the proposed SELECT"},
+                    {"capability": "upload_dataset", "does": "load the rows as a new dataset"},
+                ],
+            },
         }},
         solution_entries=[RUNNABLE_SEGMENTATION_SOLUTION],
     )
@@ -641,7 +648,9 @@ def test_solution_is_declined_when_its_data_requires_a_transform(tmp_path):
     assert declined["runnable"] is True
     assert declined["methodologies"] == ["M-3"]
     assert declined["reason"] == (
-        "transform first: aggregate events to one row per account_id and cutoff"
+        "transform first: aggregate_events_to_entity: aggregate events to one row per account_id "
+        "and cutoff. Lake does it with workspace_sql (run the proposed SELECT); upload_dataset "
+        "(load the rows as a new dataset)"
     )
     assert answer["result"]["defects"] == []
 

@@ -22,7 +22,7 @@ agent uses the compatibility fact that only M-1, churn / GBDT classification, is
 that the old-engine fallback is active. A direct invocation without workspace query credentials
 uses the same conservative fallback.
 
-The runtime prompt is `v3`. This methodology contract remains the compatibility path when
+The runtime prompt is `v5` (see [`../solutions/runtime-solutions.md`](../solutions/runtime-solutions.md) for what v5 changed, lake#1153). This methodology contract remains the compatibility path when
 `list_solutions` is unavailable. On a current engine the solution registry composes multiple
 methodologies, as documented in
 [`../solutions/runtime-solutions.md`](../solutions/runtime-solutions.md).
