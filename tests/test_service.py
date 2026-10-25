@@ -1,4 +1,5 @@
-"""Service mode without a model: the turn contract, the health rule, and the trace."""
+"""Service mode without a model: the turn contract, the health rule, and that a turn keeps nothing
+on the pod's disk."""
 
 from __future__ import annotations
 
@@ -211,8 +212,8 @@ INDUSTRIAL_SKETCH = {
 
 def settings(tmp_path: Path) -> service.Settings:
     value = service.Settings()
-    value.trace_dir = tmp_path / "traces"
     value.corpus_path = tmp_path / "missing.jsonl"
+    value.lake_url = "http://lake"
     return value
 
 
@@ -222,18 +223,30 @@ def test_a_turn_without_a_profile_is_refused(tmp_path):
     assert not answer["ok"] and "profile" in answer["error"]
 
 
-def test_a_turn_suggests_from_the_profile_and_records_a_trace(tmp_path):
+def written_files(root: Path) -> list[Path]:
+    """Files under the test's directory other than the built catalogue the fixture writes."""
+    return sorted(path for path in root.rglob("*")
+                  if path.is_file() and path.name != "catalog.json")
+
+
+def test_a_turn_suggests_from_the_profile_and_keeps_nothing_on_disk(tmp_path, monkeypatch):
+    # The pod serves every tenant: the profile and the answer are workspace content, so a turn
+    # writes no trace file, even when the operator still sets TRACE_DIR (agent-autosuggest#13).
+    monkeypatch.setenv("TRACE_DIR", str(tmp_path / "traces"))
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
     reply = json.dumps({"suggested": [{"intent": "predict churn", "solution": "S-1",
                                        "methodology": "M-1", "runnable": True,
                                        "why_this_data_supports_it": "accounts.churned is a label"}],
                         "declined": []})
+    client = ScriptedClient(reply)
     answer = service.run_turn({"context": {"profile": PROFILE}}, settings(tmp_path),
-                              Corpus(tmp_path / "missing.jsonl"), ScriptedClient(reply))
+                              Corpus(tmp_path / "missing.jsonl"), client)
     assert answer["ok"], answer
     assert answer["result"]["project_profile"]["suggested"][0]["intent"] == "predict churn"
-    trace = json.loads((tmp_path / "traces" / f"{answer['trace_id']}.json").read_text())
-    assert trace["profile"]["industry"] == "saas"
-    assert trace["methodology_evidence"]["source"] == "old-engine fallback"
+    assert answer["trace_id"], "the turn is still named, for lake to store with the answer"
+    assert json.loads(client.calls[0]["messages"][1]["content"])["industry"] == "saas"
+    assert written_files(tmp_path) == []
+    assert not hasattr(service.Settings(), "trace_dir")
 
 
 def test_health_fails_without_the_corpus(tmp_path):
@@ -275,18 +288,20 @@ def test_scan_my_workspace_reads_the_profile_with_the_turns_credential(tmp_path)
                                        "why_this_data_supports_it": "accounts.churned is a label"}],
                         "declined": []})
     node = FakeWorkspace(["accounts", "broken"])
+    client = ScriptedClient(reply)
     answer = service.run_turn({"request": "?", "zetta_base_url": "http://lake/workspaces/c/zetta",
                                "zetta_token": "lat.t.secret"},
                               settings(tmp_path), Corpus(tmp_path / "missing.jsonl"),
-                              ScriptedClient(reply), get=node.get)
+                              client, get=node.get)
     assert answer["ok"], answer
     assert all(url.startswith("http://lake/workspaces/c/zetta/v1/") for url, _ in node.urls)
     assert {token for _, token in node.urls} == {"lat.t.secret"}
-    trace = json.loads((tmp_path / "traces" / f"{answer['trace_id']}.json").read_text())
-    tables = trace["profile"]["tables"]
+    tables = json.loads(client.calls[0]["messages"][1]["content"])["tables"]
     assert [t["name"] for t in tables] == ["accounts", "broken"]
     assert tables[0]["rows"] == 200 and tables[1]["columns"] == []
-    assert "lat.t.secret" not in json.dumps(trace), "the credential never reaches a trace"
+    assert "lat.t.secret" not in json.dumps(answer), "the credential never reaches the answer"
+    assert "lat.t.secret" not in json.dumps(client.calls), "nor the model"
+    assert written_files(tmp_path) == []
 
 
 def test_an_empty_workspace_is_told_to_load_data(tmp_path):
@@ -363,7 +378,7 @@ def test_solution_registry_suggests_a_runnable_solution_at_a_level(tmp_path):
     assert opportunity["level"] == 1
     assert opportunity["methodologies"] == ["M-3"]
     assert opportunity["runnable"] is True
-    assert answer["result"]["prompt_version"] == "v4"
+    assert answer["result"]["prompt_version"] == "v5"
     assert answer["result"]["defects"] == []
     assert ("list_solutions", {}) in engine.calls
     assert ("get_solution", {"solution": "S-3"}) in engine.calls
@@ -435,8 +450,8 @@ def test_data_app_opportunity_uses_lake_state_and_stays_a_confirmed_proposal(tmp
     system_prompt = client.calls[0]["messages"][0]["content"]
     assert "revenue-dashboard" in system_prompt
     assert "agent-application" in system_prompt
-    trace = json.loads((tmp_path / "traces" / f"{answer['trace_id']}.json").read_text())
-    assert trace["app_evidence"]["apps"][0]["app"]["id"] == "app-1"
+    assert "app-1" in system_prompt
+    assert written_files(tmp_path) == []
 
 
 def test_solution_with_missing_components_is_not_presented_as_ready(tmp_path):
@@ -610,8 +625,15 @@ def test_solution_is_declined_when_its_data_requires_a_transform(tmp_path):
         [SEGMENTATION],
         analyses={"events": {"grain": "event", "keys": ["account_id", "occurred_at"]}},
         plans={("events", "M-3"): {
-            "status": "transform_first",
-            "reason": "aggregate events to one row per account_id and cutoff",
+            "status": "transform_required",
+            "transform_required": {
+                "name": "aggregate_events_to_entity",
+                "description": "aggregate events to one row per account_id and cutoff",
+                "performed_by": [
+                    {"capability": "workspace_sql", "does": "run the proposed SELECT"},
+                    {"capability": "upload_dataset", "does": "load the rows as a new dataset"},
+                ],
+            },
         }},
         solution_entries=[RUNNABLE_SEGMENTATION_SOLUTION],
     )
@@ -641,7 +663,9 @@ def test_solution_is_declined_when_its_data_requires_a_transform(tmp_path):
     assert declined["runnable"] is True
     assert declined["methodologies"] == ["M-3"]
     assert declined["reason"] == (
-        "transform first: aggregate events to one row per account_id and cutoff"
+        "transform first: aggregate_events_to_entity: aggregate events to one row per account_id "
+        "and cutoff. Lake does it with workspace_sql (run the proposed SELECT); upload_dataset "
+        "(load the rows as a new dataset)"
     )
     assert answer["result"]["defects"] == []
 
@@ -685,10 +709,13 @@ def test_a_turn_calls_its_model_through_lakes_gateway_with_the_turns_key(tmp_pat
     monkeypatch.setattr(service, "gateway_client", lambda url, token: model.gateway_client(
         url, token, http_client=httpx.Client(transport=httpx.MockTransport(gateway))))
     engine = FakeEngine([])
+    configured = settings(tmp_path)
+    configured.lake_url = "http://lake:8080"
+    # The turn's own lake_url is never used: the key goes to this service's LAKE_URL (#21).
     answer = service.run_turn(
-        {"context": {"profile": PROFILE}, "lake_url": "http://lake:8080",
+        {"context": {"profile": PROFILE}, "lake_url": "http://elsewhere:9",
          "lake_token": "lat.task.secret", "customer_id": "c"},
-        settings(tmp_path), Corpus(tmp_path / "missing.jsonl"), None,
+        configured, Corpus(tmp_path / "missing.jsonl"), None,
         query=engine.query, lake_query=FakeLakeState().query)
     assert answer["ok"], answer
     assert [str(request.url) for request in seen] == ["http://lake:8080/openai/v1/chat/completions"]
@@ -699,4 +726,14 @@ def test_a_turn_calls_its_model_through_lakes_gateway_with_the_turns_key(tmp_pat
                                Corpus(tmp_path / "missing.jsonl"), None,
                                query=engine.query, lake_query=FakeLakeState().query)
     assert not refused["ok"] and "lake_token" in refused["error"]
+    assert len(seen) == 1
+
+    # No LAKE_URL: the turn is refused, whatever lake_url it names.
+    configured.lake_url = ""
+    refused = service.run_turn(
+        {"context": {"profile": PROFILE}, "lake_url": "http://lake:8080",
+         "lake_token": "lat.task.secret", "customer_id": "c"},
+        configured, Corpus(tmp_path / "missing.jsonl"), None,
+        query=engine.query, lake_query=FakeLakeState().query)
+    assert not refused["ok"] and "LAKE_URL is not set" in refused["error"]
     assert len(seen) == 1

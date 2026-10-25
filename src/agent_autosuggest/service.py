@@ -9,14 +9,15 @@ Standard library only, like the Project Agent's service.
 
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import uuid
 from importlib.metadata import PackageNotFoundError, version
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from openai import OpenAI
 
@@ -35,8 +36,55 @@ class Settings:
         self.model = os.environ.get("AUTOSUGGEST_MODEL", "gpt-4o")
         self.lake_url = os.environ.get("LAKE_URL", "")
         self.token = os.environ.get("AGENT_SERVICE_TOKEN", "")
-        self.trace_dir = Path(os.environ.get("TRACE_DIR", "/tmp/agent-autosuggest-traces"))
         self.shots = int(os.environ.get("AUTOSUGGEST_SHOTS", "3"))
+
+
+DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _origin(url: str) -> tuple[str, str, int] | None:
+    """`(scheme, host, port)` of an absolute http(s) URL with no user info, or None."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return None
+    scheme = parts.scheme.lower()
+    if scheme not in DEFAULT_PORTS or not parts.hostname or "@" in parts.netloc:
+        return None
+    return scheme, parts.hostname.lower(), port or DEFAULT_PORTS[scheme]
+
+
+def lakes_url(settings: Settings) -> str:
+    """Lake's address from this service's environment (`LAKE_URL`), the only place a turn's
+    credential is ever sent; empty when unset or not an absolute http(s) URL."""
+    lake = settings.lake_url.strip().rstrip("/")
+    return lake if lake and _origin(lake) is not None else ""
+
+
+def workspace_url(requested: str, lake: str) -> str | None:
+    """The turn's `zetta_base_url` when it is Lake's workspace route, else None.
+
+    Lake hands the agent its read path to the person's workspace
+    (`<LAKE_URL>/workspaces/<customer>/zetta`), and the turn's credential is sent there. The
+    address comes from the request, so it is accepted only when it is on Lake's own origin
+    (scheme, host and port of `LAKE_URL`) under `LAKE_URL`'s path, with no user info, query or
+    fragment; anything else would send the bearer to a host the caller chose.
+    """
+    want = _origin(lake)
+    got = _origin(requested)
+    if want is None or got is None or got != want:
+        return None
+    parts, base = urlsplit(requested), urlsplit(lake)
+    if parts.query or parts.fragment or "\\" in requested:
+        return None
+    prefix = base.path.rstrip("/")
+    path = parts.path
+    if prefix and not (path == prefix or path.startswith(prefix + "/")):
+        return None
+    if any(segment in (".", "..") for segment in path.split("/")):
+        return None
+    return requested.rstrip("/")
 
 
 def profile_from_turn(turn: dict[str, Any]) -> dict[str, Any] | None:
@@ -57,24 +105,35 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
              query: methodologies.Query | None = None,
              lake_query: apps.Query | None = None) -> dict[str, Any]:
     profile = profile_from_turn(turn)
-    if profile is None and turn.get("zetta_base_url") and turn.get("zetta_token"):
+    scan = profile is None and bool(turn.get("zetta_base_url") and turn.get("zetta_token"))
+    reads_lake = (query is None or lake_query is None) and bool(
+        turn.get("lake_token") and turn.get("customer_id"))
+    lake = lakes_url(settings)
+    if not lake and (scan or reads_lake or client is None):
+        # The turn's credential goes only to Lake at this service's own LAKE_URL, never to an
+        # address the request names (agent-autosuggest#21).
+        return {"ok": False, "error": "LAKE_URL is not set: this agent sends a turn's "
+                                      "credential only to Lake's configured address"}
+    if scan:
         # Scan my workspace (lake#269): read the workspace with the turn's read-only credential.
+        base = workspace_url(str(turn["zetta_base_url"]), lake)
+        if base is None:
+            return {"ok": False, "error": "zetta_base_url is not Lake's workspace route at "
+                                          "LAKE_URL; the turn's credential is never sent elsewhere"}
         profile = profile_from_turn({**turn, "profile": workspace.read_profile(
-            turn["zetta_base_url"], turn["zetta_token"], get)})
+            base, turn["zetta_token"], get)})
         if profile is None:
             return {"ok": False, "error": "the workspace has no datasets yet: load data first"}
     if profile is None:
         return {"ok": False, "error": "a turn needs a profile with its tables or connections"}
 
-    if query is None or lake_query is None:
-        lake_url = turn.get("lake_url") or settings.lake_url
-        lake_token = turn.get("lake_token")
-        customer_id = turn.get("customer_id")
-        if lake_url and lake_token and customer_id:
-            if query is None:
-                query = workspace.make_query(lake_url, lake_token, customer_id)
-            if lake_query is None:
-                lake_query = workspace.make_lake_query(lake_url, lake_token, customer_id)
+    if reads_lake:
+        # Always this service's LAKE_URL; a turn's own `lake_url` is never used.
+        lake_token, customer_id = turn["lake_token"], turn["customer_id"]
+        if query is None:
+            query = workspace.make_query(lake, lake_token, customer_id)
+        if lake_query is None:
+            lake_query = workspace.make_lake_query(lake, lake_token, customer_id)
     try:
         methodology_evidence = methodologies.inspect(profile, query)
         solution_evidence = solutions.inspect(query)
@@ -83,13 +142,14 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
         return {"ok": False, "error": f"{error.code}: {error}"}
     if client is None:
         # The model is reached through lake with the turn's own key, which counts its tokens in
-        # the turn's workspace (lake#248); this agent holds no provider key.
-        model_url = turn.get("lake_url") or settings.lake_url
+        # the turn's workspace (lake#248); this agent holds no provider key. The address is this
+        # service's LAKE_URL; the turn's own `lake_url` is never used, so the key cannot be sent
+        # to a host the caller names (agent-autosuggest#21).
         model_key = turn.get("lake_token") or turn.get("zetta_token")
-        if not model_url or not model_key:
-            return {"ok": False, "error": "a turn needs lake_url and its lake_token to reach the "
-                                          "model through lake"}
-        client = gateway_client(model_url, model_key)
+        if not model_key:
+            return {"ok": False, "error": "a turn needs its lake_token to reach the model "
+                                          "through lake"}
+        client = gateway_client(lake, model_key)
     answer, used = suggest(
         profile,
         corpus,
@@ -114,16 +174,10 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
             app_evidence,
         ),
     }
+    # The trace id names the turn; lake stores it with the answer in the turn's workspace Zetta.
+    # Nothing is written to the pod's disk: the pod serves every tenant, and the profile, the
+    # evidence and the answer are workspace content (agent-autosuggest#13).
     trace_id = str(uuid.uuid4())
-    settings.trace_dir.mkdir(parents=True, exist_ok=True)
-    (settings.trace_dir / f"{trace_id}.json").write_text(json.dumps(
-        {"trace_id": trace_id, "agent": "agent-autosuggest",
-         "at": datetime.now(timezone.utc).isoformat(), "profile": profile,
-         "methodology_evidence": methodology_evidence,
-         "solution_evidence": solution_evidence,
-         "app_evidence": app_evidence,
-         "result": result},
-        indent=1, default=str))
     return {"ok": True, "trace_id": trace_id, "result": result}
 
 
@@ -140,6 +194,22 @@ def health(settings: Settings, corpus: Corpus) -> tuple[int, dict[str, Any]]:
         return 503, {"ok": False, "error": f"no corpus at {settings.corpus_path}"}
     return 200, {"ok": True, "agent": "agent-autosuggest", "examples": len(corpus.examples),
                  "model": settings.model, "version": _version()}
+
+
+def turn_refusal(authorization: str | None, token: str) -> tuple[int, str] | None:
+    """Why `POST /v1/turn` is refused, as `(status, error)`, or None when the caller may proceed.
+
+    The route fails closed: with `AGENT_SERVICE_TOKEN` unset or empty every turn is refused, so a
+    service started without it is never open. The bearer is compared in constant time
+    (`hmac.compare_digest` over bytes), so the comparison's timing says nothing about the token.
+    """
+    if not token:
+        return 503, "AGENT_SERVICE_TOKEN is not set; this service refuses every turn"
+    expected = f"Bearer {token}".encode()
+    supplied = (authorization or "").encode("utf-8", "surrogateescape")
+    if not hmac.compare_digest(supplied, expected):
+        return 401, "unauthorized"
+    return None
 
 
 def make_handler(settings: Settings, corpus: Corpus) -> type[BaseHTTPRequestHandler]:
@@ -162,8 +232,10 @@ def make_handler(settings: Settings, corpus: Corpus) -> type[BaseHTTPRequestHand
             if self.path != "/v1/turn":
                 self._send(404, {"ok": False, "error": "not found"})
                 return
-            if settings.token and self.headers.get("Authorization") != f"Bearer {settings.token}":
-                self._send(401, {"ok": False, "error": "unauthorized"})
+            refusal = turn_refusal(self.headers.get("Authorization"), settings.token)
+            if refusal is not None:
+                status, error = refusal
+                self._send(status, {"ok": False, "error": error})
                 return
             try:
                 turn = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))

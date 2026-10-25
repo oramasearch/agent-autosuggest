@@ -18,7 +18,6 @@ COPY --from=corpus autosuggest-sft-v3.jsonl /app/corpus/autosuggest-sft-v3.jsonl
 ENV PATH=/app/.venv/bin:$PATH \
     ZETTA_CATALOG=/app/catalog/catalog.json \
     AUTOSUGGEST_CORPUS=/app/corpus/autosuggest-sft-v3.jsonl \
-    TRACE_DIR=/tmp/agent-autosuggest-traces \
     PORT=8080
 USER 10001
 EXPOSE 8080

@@ -22,7 +22,7 @@ from openai import OpenAI
 from agent_autosuggest import apps, catalog, methodologies, solutions, validate
 from agent_autosuggest.retrieval import Corpus
 
-PROMPT_VERSION = "v4"
+PROMPT_VERSION = "v5"
 PROMPTS = Path(__file__).parent / "prompts"
 
 

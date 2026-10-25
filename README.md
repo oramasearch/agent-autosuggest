@@ -1,6 +1,6 @@
 # agent-autosuggest
 
-Current release: [v0.1.0](docs/releases/v0.1.0.md) (every release: [`docs/releases/`](docs/releases/README.md)).
+Current release: [v0.2.0](docs/releases/v0.2.0.md) (every release: [`docs/releases/`](docs/releases/README.md)).
 
 Reads a **profile** — a business situation and its data — and proposes what is worth building.
 
@@ -38,30 +38,46 @@ Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.c
 | `GET /healthz` | `200` with the corpus size, model and package version, or `503` when the corpus is missing |
 | `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
 
+**A turn's credential goes only to Lake at this service's own `LAKE_URL`** (#21). The model gateway
+and lake's capabilities (`workspace_query`, `list_apps`, ...) are always reached at `LAKE_URL`; a
+turn's `lake_url` is ignored. The workspace address, `zetta_base_url`, is Lake's workspace route
+(`<LAKE_URL>/workspaces/<customer>/zetta`) and is accepted only on `LAKE_URL`'s origin (scheme, host
+and port) under its path, with no user info, query or fragment; any other address refuses the turn
+before a request is made. With `LAKE_URL` unset, every turn that would send a credential is refused.
+
 **Scan my workspace** (lake#269) hands it no profile. Instead it gets `zetta_base_url` (lake's
 `/workspaces/<customer>/zetta` path) and a read-only task credential as `zetta_token`, and
 `workspace.py` reads the profile itself: every dataset's database, name, columns and rows, up to
 twelve, via `list_datasets` and `get_dataset`, the shape lake used to build. A workspace with no
-datasets is told to load data first. The credential never reaches a trace.
+datasets is told to load data first. The credential never reaches the answer or the model's messages.
 
 **Turns arrive on lake's agent bus** (lake `docs/api/agent-bus.md`). `lake_bus.py` long-polls
 `receive_agent_tasks` through lake with this agent's own bus credential (`AGENT_BUS_TOKEN`). It
 claims each task, runs it as `/v1/turn` would, and publishes `progress`, then the answer or
 `failed`. It starts when the operator sets `LAKE_URL`, `AGENT_BUS_TOKEN` and `AGENT_BUS_AGENT`.
-`AGENT_SERVICE_TOKEN`, when set, is required as a bearer; every turn is a trace in `TRACE_DIR`;
+`AGENT_SERVICE_TOKEN` is required as a bearer, compared in constant time (`401` otherwise), and
+with it unset or empty the route fails closed (`503` for every turn); nothing about a turn is written to the pod's disk;
 `AUTOSUGGEST_MODEL` picks the model. **The model is reached through lake** (lake#248, lake
-`docs/api/model-gateway.md`): every call goes to `<lake_url>/openai/v1` with the turn's own
+`docs/api/model-gateway.md`): every call goes to `<LAKE_URL>/openai/v1` with the turn's own
 `lake_token` as the API key (`model.py`), so lake counts its tokens in the turn's workspace and
 enforces the account's model-token limit. The service holds no `OPENAI_API_KEY`; a turn without a
 lake credential is refused. Only the command line above, which runs for no workspace, calls OpenAI
 directly with your own key.
+
+**A turn keeps nothing on the pod** (agent-autosuggest#13). The pod serves every workspace, and a
+turn's profile (rows from up to twelve datasets), evidence and answer are that workspace's content,
+which belongs in its workspace Zetta. So no trace file is written: the answer goes back on the bus
+(or the `/v1/turn` response), and lake stores it, with its `trace_id`, in the turn's workspace.
+`TRACE_DIR` is no longer read.
 
 **Solutions and methodologies are read from the engine for every turn.** Auto-Suggest calls lake's
 `workspace_query` for `list_solutions` and `list_methodologies`. A current-engine Opportunity names
 its S-n solution, selected level, composed methodology ids, and registry-derived `runnable` status.
 Entries with missing production components say that the pipeline builds but operation still needs
 the named components; Band-B sketches name their promotion condition and remain declined. It uses
-`analyze_dataset` and `plan_features` to decline data that must be transformed first. If
+`analyze_dataset` and `plan_features`: a composition every methodology plans `ready` on one dataset
+is suggested, with any preparation as a step of the project, and data that must be transformed first
+is declined naming the Lake capability that performs it (lake#1153). If
 `list_solutions` returns `unknown_capability`, the agent preserves the methodology-only behavior;
 if that registry is also unavailable, only M-1 is treated as runnable. See
 [`docs/solutions/runtime-solutions.md`](docs/solutions/runtime-solutions.md) and

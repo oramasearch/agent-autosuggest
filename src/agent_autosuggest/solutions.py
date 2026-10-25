@@ -64,7 +64,14 @@ def enforce(
             suggested.append(item)
 
     for original in answer.get("declined") or []:
-        item = _ground(dict(original), evidence, methodology_evidence, query)
+        item = dict(original)
+        declined_as = item.get("answer")
+        item = _ground(item, evidence, methodology_evidence, query)
+        if declined_as == "transform first" and item.get("answer") == "transform first":
+            promoted = _promote_when_ready(item, methodology_evidence)
+            if promoted is not None:
+                suggested.append(promoted)
+                continue
         declined.append(item)
 
     return {**answer, "suggested": suggested, "declined": declined}
@@ -221,6 +228,44 @@ def _get_solution(
         )
     details[identifier] = detail
     return detail
+
+
+def _promote_when_ready(
+    item: dict[str, Any],
+    methodology_evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    """A runnable solution the model declined as `transform first` while every methodology it
+    composes plans `ready` on one dataset is an Opportunity (lake#1153): the feature plans are the
+    engine's judgement of the data, so the model's preparation becomes a step of the project
+    (`required_first`), never a reason to suggest nothing."""
+    if item.get("runnable") is not True:
+        return None
+    ready = methodologies.ready_dataset(methodology_evidence, list(item.get("methodologies") or []))
+    if ready is None:
+        return None
+    promoted = {key: value for key, value in item.items() if key not in {"answer", "reason"}}
+    preparation = str(item.get("reason") or "").strip()
+    if preparation.lower().startswith("transform first:"):
+        preparation = preparation[len("transform first:"):].strip()
+    required = list(promoted.get("required_first") or [])
+    if preparation and preparation not in required:
+        required.append(preparation)
+    promoted["required_first"] = required
+    if not promoted.get("why_this_data_supports_it"):
+        promoted["why_this_data_supports_it"] = _readiness_grounding(ready, item)
+    return promoted
+
+
+def _readiness_grounding(ready: dict[str, Any], item: dict[str, Any]) -> str:
+    dataset = ready["dataset"]
+    text = (f"{dataset}: the feature plans for {', '.join(item.get('methodologies') or [])} "
+            "are ready")
+    for plan in ready["plans"]:
+        as_of = (plan.get("inferred") or {}).get("as_of") if isinstance(plan, dict) else None
+        if isinstance(as_of, dict) and as_of.get("column"):
+            text += f", with features computed as of {as_of['column']} ({as_of.get('value')})"
+            break
+    return text
 
 
 def _unsupported(item: dict[str, Any]) -> dict[str, Any]:

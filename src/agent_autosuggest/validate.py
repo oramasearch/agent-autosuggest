@@ -96,6 +96,13 @@ def _solution_defects(
             reason = str(item.get("reason") or "")
             if not reason.lower().startswith("transform first:"):
                 problems.append(f"{where}: transform first must name the transform")
+            elif not any(name in reason for name in methodologies.LAKE_TRANSFORM_CAPABILITIES):
+                # lake#1153: a preparation Lake offers no way to perform is not an answer.
+                problems.append(
+                    f"{where}: transform first must name the Lake capability that performs it "
+                    f"(one of {', '.join(methodologies.LAKE_TRANSFORM_CAPABILITIES)}), as the "
+                    "feature plan's transform_required.performed_by does"
+                )
 
     _check_product_claims(answer, problems)
     return problems
