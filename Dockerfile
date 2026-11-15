@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1
+# SPDX-License-Identifier: MIT
+
 # Auto-Suggest's service image (agent-autosuggest#1): private on Docker Hub as
 # oramasearch/agent-autosuggest. The retrieval corpus is a named build context, `corpus`, pointing at
 # agent-autosuggest-corpus/corpus, so the image carries the precedent it cannot run without.

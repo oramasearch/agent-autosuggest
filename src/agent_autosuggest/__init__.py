@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Auto-Suggest runtime agent."""
 
 __all__ = ["main", "suggest", "serve"]

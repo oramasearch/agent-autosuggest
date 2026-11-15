@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Runtime solution catalogue from the workspace engine.
 
 The build catalogue remains useful vocabulary for engines that predate solutions. Once

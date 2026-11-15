@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Runtime solution selection without a model or network."""
 
 from __future__ import annotations
