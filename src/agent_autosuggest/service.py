@@ -109,6 +109,9 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
     reads_lake = (query is None or lake_query is None) and bool(
         turn.get("lake_token") and turn.get("customer_id"))
     lake = lakes_url(settings)
+    # Sent with the turn's credential on every call it makes to Lake: `X-Lake-Agent-Task` when the
+    # turn was claimed by reference (lake#871), none otherwise.
+    headers = lake_bus.task_headers(turn)
     if not lake and (scan or reads_lake or client is None):
         # The turn's credential goes only to Lake at this service's own LAKE_URL, never to an
         # address the request names (agent-autosuggest#21).
@@ -121,7 +124,7 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
             return {"ok": False, "error": "zetta_base_url is not Lake's workspace route at "
                                           "LAKE_URL; the turn's credential is never sent elsewhere"}
         profile = profile_from_turn({**turn, "profile": workspace.read_profile(
-            base, turn["zetta_token"], get)})
+            base, turn["zetta_token"], get, headers=headers)})
         if profile is None:
             return {"ok": False, "error": "the workspace has no datasets yet: load data first"}
     if profile is None:
@@ -131,9 +134,10 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
         # Always this service's LAKE_URL; a turn's own `lake_url` is never used.
         lake_token, customer_id = turn["lake_token"], turn["customer_id"]
         if query is None:
-            query = workspace.make_query(lake, lake_token, customer_id)
+            query = workspace.make_query(lake, lake_token, customer_id, headers=headers)
         if lake_query is None:
-            lake_query = workspace.make_lake_query(lake, lake_token, customer_id)
+            lake_query = workspace.make_lake_query(lake, lake_token, customer_id,
+                                                   headers=headers)
     try:
         methodology_evidence = methodologies.inspect(profile, query)
         solution_evidence = solutions.inspect(query)
@@ -149,7 +153,7 @@ def run_turn(turn: dict[str, Any], settings: Settings, corpus: Corpus,
         if not model_key:
             return {"ok": False, "error": "a turn needs its lake_token to reach the model "
                                           "through lake"}
-        client = gateway_client(lake, model_key)
+        client = gateway_client(lake, model_key, headers=headers)
     answer, used = suggest(
         profile,
         corpus,

@@ -18,9 +18,10 @@ from typing import Any
 
 MAX_TABLES = 12
 
-# (url, bearer) -> the JSON envelope {ok, value | error}
-Get = Callable[[str, str], dict[str, Any]]
-Post = Callable[[str, str, dict[str, Any]], dict[str, Any]]
+# (url, bearer[, body]) -> the JSON envelope {ok, value | error}; each also takes `headers=` when a
+# turn names its task (lake#871), and is called without it otherwise.
+Get = Callable[..., dict[str, Any]]
+Post = Callable[..., dict[str, Any]]
 
 
 class CapabilityError(RuntimeError):
@@ -31,8 +32,15 @@ class CapabilityError(RuntimeError):
         self.code = code
 
 
-def _urllib_get(url: str, token: str) -> dict[str, Any]:
-    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}",
+def _with_headers(headers: dict[str, str] | None) -> dict[str, Any]:
+    """The keyword a Get or Post takes the task's headers by, only when there are any: a turn
+    claimed by reference names its task on every call (`X-Lake-Agent-Task`, lake#871)."""
+    return {"headers": dict(headers)} if headers else {}
+
+
+def _urllib_get(url: str, token: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
+    request = urllib.request.Request(url, headers={**(headers or {}),
+                                                   "Authorization": f"Bearer {token}",
                                                    "Accept": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
@@ -44,12 +52,14 @@ def _urllib_get(url: str, token: str) -> dict[str, Any]:
             return {"ok": False, "error": {"message": f"HTTP {error.code}"}}
 
 
-def _urllib_post(url: str, token: str, body: dict[str, Any]) -> dict[str, Any]:
+def _urllib_post(url: str, token: str, body: dict[str, Any],
+                 headers: dict[str, str] | None = None) -> dict[str, Any]:
     request = urllib.request.Request(
         url,
         data=json.dumps(body).encode(),
         method="POST",
         headers={
+            **(headers or {}),
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -69,14 +79,16 @@ def _urllib_post(url: str, token: str, body: dict[str, Any]) -> dict[str, Any]:
 
 
 def make_query(lake_url: str, token: str, customer_id: str,
-               post: Post | None = None) -> Callable[[str, dict[str, Any]], dict[str, Any]]:
-    """Build the read path from this agent through lake to the workspace engine."""
+               post: Post | None = None, headers: dict[str, str] | None = None
+               ) -> Callable[[str, dict[str, Any]], dict[str, Any]]:
+    """Build the read path from this agent through lake to the workspace engine. `headers` go
+    with every call (`lake_bus.task_headers` of the turn)."""
     send = post or _urllib_post
     url = f"{lake_url.rstrip('/')}/v1/workspace_query"
 
     def query(capability: str, inputs: dict[str, Any]) -> dict[str, Any]:
         body = {"customer_id": customer_id, "capability": capability, "input": inputs}
-        answer = send(url, token, body)
+        answer = send(url, token, body, **_with_headers(headers))
         if not isinstance(answer, dict) or not answer.get("ok"):
             error = answer.get("error") if isinstance(answer, dict) else None
             error = error if isinstance(error, dict) else {}
@@ -93,8 +105,10 @@ def make_query(lake_url: str, token: str, customer_id: str,
 
 
 def make_lake_query(lake_url: str, token: str, customer_id: str,
-                    get: Get | None = None) -> Callable[[str, dict[str, Any]], dict[str, Any]]:
-    """Build a read-only caller for lake capabilities exposed as GET ``/v1/<name>``."""
+                    get: Get | None = None, headers: dict[str, str] | None = None
+                    ) -> Callable[[str, dict[str, Any]], dict[str, Any]]:
+    """Build a read-only caller for lake capabilities exposed as GET ``/v1/<name>``. `headers` go
+    with every call (`lake_bus.task_headers` of the turn)."""
     send = get or _urllib_get
     base = lake_url.rstrip("/")
 
@@ -105,7 +119,7 @@ def make_lake_query(lake_url: str, token: str, customer_id: str,
             for key, value in arguments.items()
         }
         url = f"{base}/v1/{capability}?{urllib.parse.urlencode(encoded)}"
-        answer = send(url, token)
+        answer = send(url, token, **_with_headers(headers))
         if not isinstance(answer, dict) or not answer.get("ok"):
             error = answer.get("error") if isinstance(answer, dict) else None
             error = error if isinstance(error, dict) else {}
@@ -124,14 +138,16 @@ def make_lake_query(lake_url: str, token: str, customer_id: str,
     return query
 
 
-def read_profile(base_url: str, token: str, get: Get | None = None) -> dict[str, Any]:
-    """The workspace's datasets as a profile. An unreadable dataset keeps its name, no columns."""
+def read_profile(base_url: str, token: str, get: Get | None = None,
+                 headers: dict[str, str] | None = None) -> dict[str, Any]:
+    """The workspace's datasets as a profile. An unreadable dataset keeps its name, no columns.
+    `headers` go with every read (`lake_bus.task_headers` of the turn)."""
     get = get or _urllib_get
     base = base_url.rstrip("/")
 
     def read(capability: str, params: dict[str, str]) -> dict[str, Any] | None:
         query = ("?" + urllib.parse.urlencode(params)) if params else ""
-        answer = get(f"{base}/v1/{capability}{query}", token)
+        answer = get(f"{base}/v1/{capability}{query}", token, **_with_headers(headers))
         return answer.get("value") if isinstance(answer, dict) and answer.get("ok") else None
 
     profile: dict[str, Any] = {"industry": "", "persona": "", "tables": []}
