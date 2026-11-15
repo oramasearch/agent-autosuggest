@@ -101,6 +101,8 @@ corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), 
 cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
 context:corpus=local:corpus`). Tests: `uv run pytest`.
 
+The Dockerfile pins its bases by multi-platform index digest (lake#1003): `python:3.12-slim@sha256:5e2bdb1b…` for both stages and `ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85a…`. Moving one is a reviewed change of its digest.
+
 ## The six parts
 
 | file | job |
