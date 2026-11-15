@@ -29,7 +29,7 @@ def sent(monkeypatch):
     monkeypatch.setattr(workspace, "_urllib_get", get)
     monkeypatch.setattr(workspace, "_urllib_post", post)
     monkeypatch.setattr(
-        service, "gateway_client", lambda url, token: pytest.fail(f"model called at {url}")
+        service, "gateway_client", lambda url, token, **kw: pytest.fail(f"model called at {url}")
     )
     return requests
 

@@ -55,6 +55,17 @@ datasets is told to load data first. The credential never reaches the answer or 
 `receive_agent_tasks` through lake with this agent's own bus credential (`AGENT_BUS_TOKEN`). It
 claims each task, runs it as `/v1/turn` would, and publishes `progress`, then the answer or
 `failed`. It starts when the operator sets `LAKE_URL`, `AGENT_BUS_TOKEN` and `AGENT_BUS_AGENT`.
+
+**No task credential reaches this process** (lake#871). Each claim asks for `credentials:
+by_reference`: Lake keeps the task's credential and answers the body with `lake_token` and
+`zetta_token` empty. They are filled with this agent's bus credential, and every call the turn
+makes to Lake (the workspace scan through `zetta_base_url`, `workspace_query`, Lake's GET
+capabilities and the model gateway) carries the header `X-Lake-Agent-Task: <task id>`, which Lake
+honours only while that task is claimed and `Running` on this agent (`lake_bus.task_headers`). The
+bus calls themselves never send it. A Lake from before lake#871 refuses the `credentials` field
+before claiming anything; the claim is then asked again without it, and the body's own credentials
+are used as before, with no task header. Lake removes the in-body mode once every library agent
+claims by reference.
 `AGENT_SERVICE_TOKEN` is required as a bearer, compared in constant time (`401` otherwise), and
 with it unset or empty the route fails closed (`503` for every turn); nothing about a turn is written to the pod's disk;
 `AUTOSUGGEST_MODEL` picks the model. **The model is reached through lake** (lake#248, lake
@@ -99,7 +110,8 @@ checkout, as before.
 **Image:** `Dockerfile`, published **private** as `oramasearch/agent-autosuggest`, with the
 corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), built on the
 cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
-context:corpus=local:corpus`). Tests: `uv run pytest`.
+context:corpus=local:corpus`). Tests: `uv run pytest`; `tests/test_by_reference.py` covers the by-reference claim, its fallback
+on an older Lake, and the task header on every Lake, workspace and model call of a turn (lake#871).
 
 ## The six parts
 
