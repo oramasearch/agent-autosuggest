@@ -12,7 +12,7 @@ without a translation layer that can drift.
 A frontier model, the solutions catalogue as context, and few-shot examples retrieved from
 `agent-autosuggest-corpus`. That corpus becomes SFT data later; until then it is the precedent this
 agent reasons from — which also means it is continuously exercised rather than sitting unread until
-a training run. See [`zetta-bridge/docs/agent-scaffold.md`](../../docs/agent-scaffold.md).
+a training run.
 
 ## Run
 
@@ -29,8 +29,7 @@ with it), `1` when nothing parseable came back.
 
 In lake Auto-Suggest is a specialized agent of the **Agent Library**: Design's *Discover
 Opportunities* sends it the workspace's profile and shows its `suggested` entries as ranked
-Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.com/oramasearch/lake/issues/228),
-[lake#237](https://github.com/oramasearch/lake/issues/237)). `agent-autosuggest-serve` runs it on
+Opportunities, and Ask Orama calls it as a subagent. `agent-autosuggest-serve` runs it on
 `PORT` (8080):
 
 | Route | What it does |
@@ -38,14 +37,14 @@ Opportunities, and Ask Orama calls it as a subagent ([lake#228](https://github.c
 | `GET /healthz` | `200` with the corpus size, model and package version, or `503` when the corpus is missing |
 | `POST /v1/turn` | One suggestion. Body: `{"profile": {...}}` or `{"context": {"profile": {...}}}`, the profile carrying its tables or connections, optionally `request`. Answers `{ok, trace_id, result: {project_profile, few_shot_from, prompt_version, defects}}`; `422` with `error` otherwise |
 
-**A turn's credential goes only to Lake at this service's own `LAKE_URL`** (#21). The model gateway
+**A turn's credential goes only to Lake at this service's own `LAKE_URL`**. The model gateway
 and lake's capabilities (`workspace_query`, `list_apps`, ...) are always reached at `LAKE_URL`; a
 turn's `lake_url` is ignored. The workspace address, `zetta_base_url`, is Lake's workspace route
 (`<LAKE_URL>/workspaces/<customer>/zetta`) and is accepted only on `LAKE_URL`'s origin (scheme, host
 and port) under its path, with no user info, query or fragment; any other address refuses the turn
 before a request is made. With `LAKE_URL` unset, every turn that would send a credential is refused.
 
-**Scan my workspace** (lake#269) hands it no profile. Instead it gets `zetta_base_url` (lake's
+**Scan my workspace** hands it no profile. Instead it gets `zetta_base_url` (lake's
 `/workspaces/<customer>/zetta` path) and a read-only task credential as `zetta_token`, and
 `workspace.py` reads the profile itself: every dataset's database, name, columns and rows, up to
 twelve, via `list_datasets` and `get_dataset`, the shape lake used to build. A workspace with no
@@ -71,6 +70,7 @@ worker is busy nothing is received, and a task this replica cannot run stays unc
 dispatch rows wait, never a claimed body. `tests/test_bus_backpressure.py` covers it.
 
 **A turn keeps nothing on the pod** (agent-autosuggest#13). The pod serves every workspace, and a
+**A turn keeps nothing on the pod**. The pod serves every workspace, and a
 turn's profile (rows from up to twelve datasets), evidence and answer are that workspace's content,
 which belongs in its workspace Zetta. So no trace file is written: the answer goes back on the bus
 (or the `/v1/turn` response), and lake stores it, with its `trace_id`, in the turn's workspace.
@@ -83,7 +83,7 @@ Entries with missing production components say that the pipeline builds but oper
 the named components; Band-B sketches name their promotion condition and remain declined. It uses
 `analyze_dataset` and `plan_features`: a composition every methodology plans `ready` on one dataset
 is suggested, with any preparation as a step of the project, and data that must be transformed first
-is declined naming the Lake capability that performs it (lake#1153). If
+is declined naming the Lake capability that performs it. If
 `list_solutions` returns `unknown_capability`, the agent preserves the methodology-only behavior;
 if that registry is also unavailable, only M-1 is treated as runnable. See
 [`docs/solutions/runtime-solutions.md`](docs/solutions/runtime-solutions.md) and
@@ -102,10 +102,9 @@ actions for a person to confirm. It delegates the confirmed build or change to A
 commits). `ZETTA_CATALOG` points at it; without it the agent builds the catalogue from a bridge
 checkout, as before.
 
-**Image:** `Dockerfile`, published **private** as `oramasearch/agent-autosuggest`, with the
-corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`), built on the
-cluster BuildKit (`--local corpus=../agent-autosuggest-corpus/corpus --opt
-context:corpus=local:corpus`). Tests: `uv run pytest`.
+**Image:** `Dockerfile`, published as `oramasearch/agent-autosuggest`, with the
+corpus as the named build context `corpus` (`agent-autosuggest-corpus/corpus`):
+`docker buildx build --build-context catalog=<dir> --build-context corpus=../agent-autosuggest-corpus/corpus -t <registry>/agent-autosuggest:<tag> .`. Tests: `uv run pytest`.
 
 The Dockerfile pins its bases by multi-platform index digest (lake#1003): `python:3.12-slim@sha256:5e2bdb1b…` for both stages and `ghcr.io/astral-sh/uv:0.11.7@sha256:240fb85a…`. Moving one is a reviewed change of its digest.
 

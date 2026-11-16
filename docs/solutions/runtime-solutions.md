@@ -21,7 +21,7 @@ Feature preparation still comes from the methodology evidence. If any methodolog
 chosen level requires a transform for every candidate dataset, the whole solution is declined with
 `transform first` and the concrete preparation instruction.
 
-**The feature plans decide whether the data is ready** ([lake#1153](https://github.com/oramasearch/lake/issues/1153)).
+**The feature plans decide whether the data is ready**.
 On lake-dev, prompt v4 declined every clean churn table as `transform first`, asking for an
 "approved snapshot/as_of setup" that Lake offers no way to make, so *Scan my workspace* suggested
 nothing. Now:

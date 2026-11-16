@@ -5,7 +5,7 @@ description = "Auto-Suggest: recommends the Opportunities a profile's data suppo
 license = "MIT"
 readme = "README.md"
 authors = [
-    { name = "Steve Sperandeo", email = "steve.sperandeo@gmail.com" }
+    { name = "OramaSearch, Inc." }
 ]
 requires-python = ">=3.12"
 dependencies = [
