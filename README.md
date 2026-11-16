@@ -1,6 +1,6 @@
 # agent-autosuggest
 
-Current release: [v0.3.0](docs/releases/v0.3.0.md) (every release: [`docs/releases/`](docs/releases/README.md)).
+Current release: [v0.3.1](docs/releases/v0.3.1.md) (every release: [`docs/releases/`](docs/releases/README.md)).
 
 Reads a **profile** — a business situation and its data — and proposes what is worth building.
 
@@ -63,13 +63,12 @@ enforces the account's model-token limit. The service holds no `OPENAI_API_KEY`;
 lake credential is refused. Only the command line above, which runs for no workspace, calls OpenAI
 directly with your own key.
 
-A task is claimed only when a worker is free to run it at once (agent-autosuggest#23, LSR-075): while every
+A task is claimed only when a worker is free to run it at once: while every
 worker is busy nothing is received, and a task this replica cannot run stays unclaimed on the bus.
 `AGENT_BUS_WORKERS` (default 4) run at once; one customer holds at most `AGENT_BUS_TENANT_WORKERS`
 (default one fewer), and a freed worker goes to the waiting customer holding the fewest. At most 256
 dispatch rows wait, never a claimed body. `tests/test_bus_backpressure.py` covers it.
 
-**A turn keeps nothing on the pod** (agent-autosuggest#13). The pod serves every workspace, and a
 **A turn keeps nothing on the pod**. The pod serves every workspace, and a
 turn's profile (rows from up to twelve datasets), evidence and answer are that workspace's content,
 which belongs in its workspace Zetta. So no trace file is written: the answer goes back on the bus
