@@ -139,3 +139,9 @@ pass — the agent then invents ids and the validator reports a clean answer. Th
 Point `ZETTA_BRIDGE` at the bridge checkout if the parent walk cannot find it. An explicit
 `ZETTA_BRIDGE` is authoritative: if it is wrong, the run fails rather than quietly building a
 different catalogue.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party components and their licenses are in
+[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). Contributions are welcome under the
+[Contributor License Agreement](CLA.md); see [CONTRIBUTING.md](CONTRIBUTING.md).

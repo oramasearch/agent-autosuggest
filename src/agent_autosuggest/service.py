@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Service mode: Auto-Suggest as a long-running agent lake calls (lake#228, agent-autosuggest#1).
 
 In lake, Design's *Discover Opportunities* shows its `suggested` entries as ranked Opportunities;

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """The workspace profile Auto-Suggest reads for itself when a turn carries none (lake#269).
 
 In lake, *Scan my workspace* hands the agent a read-only credential for the customer's workspace

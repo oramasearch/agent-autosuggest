@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Auto-Suggest: a profile in, a project profile out.
 
 No trained model yet — a frontier model with few-shot examples retrieved from the training corpus.

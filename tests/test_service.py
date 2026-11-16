@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Service mode without a model: the turn contract, the health rule, and that a turn keeps nothing
 on the pod's disk."""
 
