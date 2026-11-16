@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """lake#1153: Scan my workspace suggested nothing on clean churn tables.
 
 Each dataset shape the issue lists, with the evidence a lake that has lake#1153 answers for it, and

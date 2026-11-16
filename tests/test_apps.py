@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Read-only Ship App and build evidence without a live lake."""
 
 from __future__ import annotations

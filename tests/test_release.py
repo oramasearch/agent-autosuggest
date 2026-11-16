@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """The version in the code has release notes, and the notes index lists them.
 
 The version is read from `pyproject.toml` (and from the installed package metadata), never repeated

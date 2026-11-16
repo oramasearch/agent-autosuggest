@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Current Ship App and image-build state from lake.
 
 These are lake control-plane reads, not workspace-engine calls. Auto-Suggest takes a bounded,

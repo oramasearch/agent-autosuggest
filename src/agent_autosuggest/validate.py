@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Check runtime solution or legacy methodology claims before they reach a caller."""
 
 from __future__ import annotations

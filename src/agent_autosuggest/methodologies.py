@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Runtime methodology and feature evidence from the workspace engine.
 
 The registry is authoritative. It changes as Zetta gains implementations, so Auto-Suggest reads

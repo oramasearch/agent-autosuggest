@@ -1,10 +1,11 @@
 [project]
 name = "agent-autosuggest"
-version = "0.2.0"
+version = "0.3.0"
 description = "Auto-Suggest: recommends the Opportunities a profile's data supports"
+license = "MIT"
 readme = "README.md"
 authors = [
-    { name = "Steve Sperandeo", email = "steve.sperandeo@gmail.com" }
+    { name = "OramaSearch, Inc." }
 ]
 requires-python = ">=3.12"
 dependencies = [

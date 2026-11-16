@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Deterministic conformance evals for data-App Opportunities."""
 
 from __future__ import annotations
