@@ -2,17 +2,17 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "agent-autosuggest-4a99ea59126e",
-  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/4a99ea59126eae251bd3ea222c2b7d30a286e2bf",
+  "name": "agent-autosuggest-47918d9a8d8f",
+  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/47918d9a8d8fa63d870b72e893e22d12b6ba6f25",
   "creationInfo": {
-    "created": "2026-11-15T17:25:23Z",
+    "created": "2026-11-16T01:53:51Z",
     "creators": [
       "Organization: OramaSearch, Inc.",
       "Tool: tools/sbom.py",
       "Tool: syft"
     ],
     "licenseListVersion": "3.29",
-    "comment": "Made from source commit 4a99ea59126eae251bd3ea222c2b7d30a286e2bf by tools/sbom.py."
+    "comment": "Made from source commit 47918d9a8d8fa63d870b72e893e22d12b6ba6f25 by tools/sbom.py."
   },
   "documentDescribes": [
     "SPDXRef-DocumentRoot"
@@ -200,7 +200,7 @@
     {
       "name": "agent-autosuggest",
       "SPDXID": "SPDXRef-DocumentRoot",
-      "versionInfo": "4a99ea59126e",
+      "versionInfo": "47918d9a8d8f",
       "downloadLocation": "git+https://github.com/oramasearch/agent-autosuggest.git",
       "homepage": "https://github.com/oramasearch/agent-autosuggest",
       "filesAnalyzed": false,
