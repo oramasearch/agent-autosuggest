@@ -3,16 +3,16 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "agent-autosuggest-v0.3.0",
-  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/568e410b483edff98a08e693ae3042262cf747ad",
+  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/6f9b7b160b6e79c039087e0885fb2435346341ba",
   "creationInfo": {
-    "created": "2026-11-16T07:23:40Z",
+    "created": "2026-11-16T07:25:30Z",
     "creators": [
       "Organization: OramaSearch, Inc.",
       "Tool: tools/sbom.py",
       "Tool: syft"
     ],
     "licenseListVersion": "3.29",
-    "comment": "Made from source commit 568e410b483edff98a08e693ae3042262cf747ad by tools/sbom.py."
+    "comment": "Made from source commit 6f9b7b160b6e79c039087e0885fb2435346341ba by tools/sbom.py."
   },
   "documentDescribes": [
     "SPDXRef-DocumentRoot"
