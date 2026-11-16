@@ -2,17 +2,17 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "agent-autosuggest-10c6657e3057",
-  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/10c6657e3057bf65e2096f22696bcd177f8eb3ad",
+  "name": "agent-autosuggest-v0.3.1",
+  "documentNamespace": "https://github.com/oramasearch/agent-autosuggest/sbom/4135058c3d79cb5666355901d36e0c8453f76e1e",
   "creationInfo": {
-    "created": "2026-11-16T07:49:45Z",
+    "created": "2026-11-16T08:33:11Z",
     "creators": [
       "Organization: OramaSearch, Inc.",
       "Tool: tools/sbom.py",
       "Tool: syft"
     ],
     "licenseListVersion": "3.29",
-    "comment": "Made from source commit 10c6657e3057bf65e2096f22696bcd177f8eb3ad by tools/sbom.py."
+    "comment": "Made from source commit 4135058c3d79cb5666355901d36e0c8453f76e1e by tools/sbom.py."
   },
   "documentDescribes": [
     "SPDXRef-DocumentRoot"
@@ -20,8 +20,8 @@
   "packages": [
     {
       "name": "agent-autosuggest",
-      "SPDXID": "SPDXRef-Package-python-agent-autosuggest-a5768baa8d37ca61",
-      "versionInfo": "0.3.0",
+      "SPDXID": "SPDXRef-Package-python-agent-autosuggest-f609123b31349f9a",
+      "versionInfo": "0.3.1",
       "supplier": "NOASSERTION",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
@@ -33,174 +33,174 @@
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent-autosuggest:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent-autosuggest:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent-autosuggest:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent-autosuggest:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent_autosuggest:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent_autosuggest:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent_autosuggest:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent_autosuggest:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent-autosuggest:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent_autosuggest:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent-autosuggest:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent-autosuggest:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent-autosuggest:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent-autosuggest:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent_autosuggest:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent_autosuggest:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent_autosuggest:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent_autosuggest:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent:python-agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent:python-agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent:python_agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent:python_agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python-agent:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python-agent:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python_agent:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python_agent:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:python:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:python:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent:agent-autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent:agent-autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "SECURITY",
           "referenceType": "cpe23Type",
-          "referenceLocator": "cpe:2.3:a:agent:agent_autosuggest:0.3.0:*:*:*:*:*:*:*"
+          "referenceLocator": "cpe:2.3:a:agent:agent_autosuggest:0.3.1:*:*:*:*:*:*:*"
         },
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:pypi/agent-autosuggest@0.3.0"
+          "referenceLocator": "pkg:pypi/agent-autosuggest@0.3.1"
         }
       ]
     },
     {
       "name": "agent-autosuggest",
       "SPDXID": "SPDXRef-DocumentRoot",
-      "versionInfo": "10c6657e3057",
+      "versionInfo": "v0.3.1",
       "downloadLocation": "git+https://github.com/oramasearch/agent-autosuggest.git",
       "homepage": "https://github.com/oramasearch/agent-autosuggest",
       "filesAnalyzed": false,
@@ -2218,17 +2218,17 @@
       "spdxElementId": "SPDXRef-DocumentRoot"
     },
     {
-      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-a5768baa8d37ca61",
+      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-f609123b31349f9a",
       "relationshipType": "CONTAINS",
       "spdxElementId": "SPDXRef-DocumentRoot"
     },
     {
-      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-a5768baa8d37ca61",
+      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-f609123b31349f9a",
       "relationshipType": "DEPENDENCY_OF",
       "spdxElementId": "SPDXRef-Package-python-httpx-b8665b7937415e27"
     },
     {
-      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-a5768baa8d37ca61",
+      "relatedSpdxElement": "SPDXRef-Package-python-agent-autosuggest-f609123b31349f9a",
       "relationshipType": "DEPENDENCY_OF",
       "spdxElementId": "SPDXRef-Package-python-openai-1181bc5571c73bdc"
     },
